@@ -13,7 +13,7 @@
 
   <div class="demo-banner no-print">
     <i class="bi bi-info-circle"></i>
-    Demo Mode — all statistics, donors, inventory, and requests on this site are fictional sample data.
+    Donor and inventory figures below are read from the real database (Step 3); blood requests still use fictional sample data (Step 4).
   </div>
 
   <!-- Navbar -->
@@ -60,7 +60,7 @@
           </div>
           <div class="col-lg-5">
             <div class="bb-card p-4">
-              <h2 class="h6 text-uppercase text-secondary mb-3">Blood group availability <span class="badge text-bg-light border ms-1">Sample data</span></h2>
+              <h2 class="h6 text-uppercase text-secondary mb-3">Blood group availability <span class="badge text-bg-light border ms-1">Live</span></h2>
               <div class="row row-cols-2 row-cols-sm-4 g-2" id="heroBloodGroups"></div>
             </div>
           </div>
@@ -73,7 +73,7 @@
       <div class="container">
         <div class="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-2">
           <h2 class="h4 mb-0">System at a glance</h2>
-          <span class="badge text-bg-light border">Demonstration figures, not real-world data</span>
+          <span class="badge text-bg-light border">Donor &amp; unit counts are live; requests are demonstration figures</span>
         </div>
         <div class="row g-4" id="statCards"></div>
       </div>
@@ -153,7 +153,7 @@
         </div>
       </div>
       <hr class="border-secondary my-4">
-      <p class="small mb-0">&copy; 2026 LifeDrop Blood Bank &amp; Donor Management System &mdash; Mini Project, Step 1 (Frontend Prototype).</p>
+      <p class="small mb-0">&copy; 2026 LifeDrop Blood Bank &amp; Donor Management System &mdash; Mini Project, Step 3 (Donor Management &amp; Inventory).</p>
     </div>
   </footer>
 
@@ -162,24 +162,41 @@
   <script src="assets/js/main.js"></script>
   <script src="assets/js/auth.js"></script>
   <script>
-    document.addEventListener("DOMContentLoaded", () => {
+    document.addEventListener("DOMContentLoaded", async () => {
       const heroContainer = document.getElementById("heroBloodGroups");
+      const statCards = document.getElementById("statCards");
+
+      // Blood-group availability and the donor/unit counts below are real,
+      // database-backed figures (Step 3). Active requests and partner-bank
+      // counts remain illustrative placeholders until Step 4 implements the
+      // request workflow those numbers actually belong to.
+      const [inventoryRes, donorsRes] = await Promise.all([
+        apiRequest("/api/inventory/summary"),
+        apiRequest("/api/donors?limit=1"),
+      ]);
+
       if (heroContainer) {
-        heroContainer.innerHTML = MOCK_INVENTORY.map((item) => `
-          <div class="col">
-            <div class="bg-chip">
-              <span class="bg-symbol">${item.bloodGroup}</span>
-              <span class="bg-count">${item.units} units</span>
+        if (inventoryRes.ok) {
+          heroContainer.innerHTML = inventoryRes.data.summary.groups.map((g) => `
+            <div class="col">
+              <div class="bg-chip">
+                <span class="bg-symbol">${g.bloodGroup}</span>
+                <span class="bg-count">${g.usableUnits} units</span>
+              </div>
             </div>
-          </div>
-        `).join("");
+          `).join("");
+        } else {
+          heroContainer.innerHTML = `<p class="small text-secondary mb-0">Inventory data is unavailable right now.</p>`;
+        }
       }
 
-      const statCards = document.getElementById("statCards");
       if (statCards) {
+        const registeredDonors = donorsRes.ok ? donorsRes.data.total : MOCK_STATS.registeredDonors;
+        const availableUnits = inventoryRes.ok ? inventoryRes.data.summary.totals.usableUnits : MOCK_STATS.availableUnits;
+
         const stats = [
-          { label: "Registered donors", value: MOCK_STATS.registeredDonors.toLocaleString(), icon: "bi-people-fill" },
-          { label: "Available blood units", value: MOCK_STATS.availableUnits.toLocaleString(), icon: "bi-droplet-half" },
+          { label: "Registered donors", value: registeredDonors.toLocaleString(), icon: "bi-people-fill" },
+          { label: "Available blood units", value: availableUnits.toLocaleString(), icon: "bi-droplet-half" },
           { label: "Active blood requests", value: MOCK_STATS.activeRequests.toLocaleString(), icon: "bi-clipboard2-pulse" },
           { label: "Partner blood banks", value: MOCK_STATS.partnerBanks.toLocaleString(), icon: "bi-hospital" },
         ];

@@ -71,3 +71,57 @@ VALID_REGISTRATION = {
     "confirmPassword": "secret123",
     "consent": True,
 }
+
+
+def login(client, email: str, password: str):
+    """Log a test client in; Step 2's auth flow rotates the session on login,
+    so callers that need a CSRF token afterwards must fetch a fresh one."""
+    return client.post("/api/auth/login", json={"email": email, "password": password})
+
+
+@pytest.fixture
+def admin_client(app, make_admin):
+    """A test client already logged in as a freshly-provisioned admin user."""
+    admin = make_admin()
+    c = app.test_client()
+    res = login(c, admin["email"], admin["password"])
+    assert res.status_code == 200
+    return c
+
+
+@pytest.fixture
+def user_without_donor_profile(app):
+    """A logged-in user created directly in the database, bypassing Step 2's
+    registration endpoint (which always auto-creates a donor profile) — lets
+    tests exercise POST /api/donors' own create/validation path directly."""
+    email = "no-donor-yet@example.com"
+    password = "secret123"
+    with app.app_context():
+        from backend.database import get_db
+        from backend.models import create_user
+
+        db = get_db()
+        create_user(db, full_name="No Donor Yet", email=email, password_hash=generate_password_hash(password))
+
+    c = app.test_client()
+    res = login(c, email, password)
+    assert res.status_code == 200
+    return c
+
+
+@pytest.fixture
+def registered_user(client):
+    """Registers VALID_REGISTRATION (which also creates a donor profile via
+    Step 2's registration flow), logs in, and returns {user, donorId}."""
+    res = client.post("/api/auth/register", json=VALID_REGISTRATION)
+    assert res.status_code == 201
+    user = res.get_json()["user"]
+
+    login_res = login(client, VALID_REGISTRATION["email"], VALID_REGISTRATION["password"])
+    assert login_res.status_code == 200
+
+    donor_res = client.get("/api/donors", query_string={"q": VALID_REGISTRATION["fullName"]})
+    donor_id = next(
+        d["id"] for d in donor_res.get_json()["donors"] if d["fullName"] == VALID_REGISTRATION["fullName"]
+    )
+    return {"user": user, "donorId": donor_id}

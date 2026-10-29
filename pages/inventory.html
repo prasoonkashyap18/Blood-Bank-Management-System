@@ -12,7 +12,7 @@
 
   <div class="demo-banner no-print">
     <i class="bi bi-info-circle"></i>
-    Demo Mode — inventory figures are fictional sample data and do not reflect any real blood bank.
+    These figures are calculated from the real inventory database (Step 3). Seed batches are fictional demonstration data.
   </div>
 
   <nav class="navbar navbar-expand-lg navbar-bb sticky-top no-print">
@@ -42,9 +42,19 @@
     <div class="container">
       <span class="section-eyebrow">Inventory</span>
       <h1 class="h3 mt-1 mb-1">Blood inventory overview</h1>
-      <p class="text-secondary mb-4">Sample stock levels across all eight blood groups.</p>
+      <p class="text-secondary mb-4">Live stock levels across all eight blood groups, calculated from batch records.</p>
 
-      <div class="row g-3 mb-4" id="inventorySummary"></div>
+      <div class="text-center py-5 text-secondary" id="invLoadingState">
+        <div class="spinner-border" role="status"></div>
+        <p class="mt-2 mb-0">Loading inventory...</p>
+      </div>
+      <div class="alert alert-danger d-none" id="invErrorState" role="alert">
+        <i class="bi bi-exclamation-triangle me-1"></i>
+        Could not load inventory data. Is the backend running?
+      </div>
+
+      <div class="row g-3 mb-3" id="inventorySummary"></div>
+      <div id="inventoryAlerts" class="mb-3"></div>
 
       <div class="bb-card p-3 p-md-4 mb-4">
         <div class="row g-3 align-items-end">
@@ -61,7 +71,7 @@
               <option value="">All statuses</option>
               <option value="Available">Available</option>
               <option value="Low">Low</option>
-              <option value="Critical">Critical</option>
+              <option value="OutOfStock">Out of stock</option>
             </select>
           </div>
           <div class="col-md-2 d-grid">
@@ -76,10 +86,12 @@
             <thead>
               <tr>
                 <th>Blood group</th>
-                <th>Available units</th>
-                <th>Capacity</th>
+                <th>Usable units</th>
+                <th>Total recorded</th>
+                <th>Batches</th>
                 <th>Status</th>
-                <th>Expiring soon</th>
+                <th>Near expiry</th>
+                <th>Expired</th>
               </tr>
             </thead>
             <tbody id="inventoryTableBody"></tbody>
@@ -92,14 +104,80 @@
       </div>
       <p class="small text-secondary mt-3 mb-0">
         <i class="bi bi-exclamation-triangle me-1"></i>
-        "Expiring soon" units are excluded from the available count shown here and must not be treated as usable stock.
+        Expired units are excluded from "usable units" above and are never counted as available stock.
       </p>
+
+      <!-- Admin-only batch management -->
+      <div id="adminInventoryPanel" class="d-none mt-5">
+        <hr class="my-4">
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <h2 class="h4 mb-0">Manage inventory batches</h2>
+          <span class="badge text-bg-light border">Administrator</span>
+        </div>
+
+        <div class="bb-card p-4 mb-4">
+          <h3 class="h6 mb-3">Add a stock batch</h3>
+          <div id="addBatchError" class="alert alert-danger d-none py-2 px-3 small" role="alert"></div>
+          <div id="addBatchSuccess" class="alert alert-success d-none py-2 px-3 small" role="alert"></div>
+          <form novalidate id="addBatchForm">
+            <div class="row g-3">
+              <div class="col-sm-6 col-md-3">
+                <label for="batchBloodGroup" class="form-label">Blood group <span class="required-asterisk">*</span></label>
+                <select class="form-select" id="batchBloodGroup" required>
+                  <option value="" selected disabled>Select group</option>
+                  <option>A+</option><option>A-</option>
+                  <option>B+</option><option>B-</option>
+                  <option>AB+</option><option>AB-</option>
+                  <option>O+</option><option>O-</option>
+                </select>
+              </div>
+              <div class="col-sm-6 col-md-3">
+                <label for="batchQuantity" class="form-label">Quantity (units) <span class="required-asterisk">*</span></label>
+                <input type="number" class="form-control" id="batchQuantity" min="1" max="100000" required>
+              </div>
+              <div class="col-sm-6 col-md-3">
+                <label for="batchCollectedDate" class="form-label">Collected date</label>
+                <input type="date" class="form-control" id="batchCollectedDate">
+              </div>
+              <div class="col-sm-6 col-md-3">
+                <label for="batchExpiryDate" class="form-label">Expiry date</label>
+                <input type="date" class="form-control" id="batchExpiryDate">
+              </div>
+              <div class="col-12">
+                <label for="batchNotes" class="form-label">Notes <span class="text-secondary small">(optional)</span></label>
+                <input type="text" class="form-control" id="batchNotes" maxlength="500" placeholder="e.g. source, collection drive, correction reason">
+              </div>
+            </div>
+            <button type="submit" class="btn btn-bb-primary mt-3"><i class="bi bi-plus-circle me-1"></i>Add batch</button>
+          </form>
+        </div>
+
+        <div class="bb-card p-0 overflow-hidden">
+          <div class="table-responsive">
+            <table class="table table-bb mb-0">
+              <thead>
+                <tr>
+                  <th>Group</th>
+                  <th>Units</th>
+                  <th>Collected</th>
+                  <th>Expiry</th>
+                  <th>Expiry status</th>
+                  <th>Batch status</th>
+                  <th>Notes</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="adminBatchTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
   </main>
 
   <footer class="footer-bb py-4 no-print mt-5">
     <div class="container text-center small">
-      &copy; 2026 LifeDrop Blood Bank &amp; Donor Management System &mdash; Mini Project, Step 1 (Frontend Prototype).
+      &copy; 2026 LifeDrop Blood Bank &amp; Donor Management System &mdash; Mini Project, Step 3 (Donor Management &amp; Inventory).
     </div>
   </footer>
 
@@ -107,92 +185,6 @@
   <script src="../assets/js/mock-data.js"></script>
   <script src="../assets/js/main.js"></script>
   <script src="../assets/js/auth.js"></script>
-  <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const summary = document.getElementById("inventorySummary");
-      const totalUnits = MOCK_INVENTORY.reduce((sum, i) => sum + i.units, 0);
-      const totalExpiring = MOCK_INVENTORY.reduce((sum, i) => sum + i.expiring, 0);
-      const lowCount = MOCK_INVENTORY.filter((i) => getStockStatus(i.units, i.capacity).label !== "Available").length;
-
-      summary.innerHTML = `
-        <div class="col-6 col-lg-3">
-          <div class="bb-card stat-card p-4 h-100">
-            <i class="bi bi-droplet-half text-danger fs-4 mb-2 d-block"></i>
-            <div class="stat-value">${totalUnits}</div>
-            <div class="stat-label">Total units in stock</div>
-          </div>
-        </div>
-        <div class="col-6 col-lg-3">
-          <div class="bb-card stat-card p-4 h-100">
-            <i class="bi bi-grid-3x3-gap text-danger fs-4 mb-2 d-block"></i>
-            <div class="stat-value">${MOCK_INVENTORY.length}</div>
-            <div class="stat-label">Blood groups tracked</div>
-          </div>
-        </div>
-        <div class="col-6 col-lg-3">
-          <div class="bb-card stat-card p-4 h-100">
-            <i class="bi bi-exclamation-triangle text-danger fs-4 mb-2 d-block"></i>
-            <div class="stat-value">${lowCount}</div>
-            <div class="stat-label">Groups low or critical</div>
-          </div>
-        </div>
-        <div class="col-6 col-lg-3">
-          <div class="bb-card stat-card p-4 h-100">
-            <i class="bi bi-hourglass-split text-danger fs-4 mb-2 d-block"></i>
-            <div class="stat-value">${totalExpiring}</div>
-            <div class="stat-label">Units expiring soon</div>
-          </div>
-        </div>
-      `;
-
-      const invSearch = document.getElementById("invSearch");
-      const statusFilter = document.getElementById("statusFilter");
-      const invClearBtn = document.getElementById("invClearBtn");
-      const tableBody = document.getElementById("inventoryTableBody");
-      const emptyState = document.getElementById("invEmptyState");
-
-      function renderInventory() {
-        const query = invSearch.value.trim().toUpperCase();
-        const status = statusFilter.value;
-
-        const filtered = MOCK_INVENTORY.filter((item) => {
-          const stock = getStockStatus(item.units, item.capacity);
-          const matchesQuery = !query || item.bloodGroup.includes(query);
-          const matchesStatus = !status || stock.label === status;
-          return matchesQuery && matchesStatus;
-        });
-
-        if (filtered.length === 0) {
-          tableBody.innerHTML = "";
-          emptyState.classList.remove("d-none");
-          return;
-        }
-        emptyState.classList.add("d-none");
-
-        tableBody.innerHTML = filtered.map((item) => {
-          const stock = getStockStatus(item.units, item.capacity);
-          return `
-            <tr>
-              <td class="fw-medium">${item.bloodGroup}</td>
-              <td>${item.units} units</td>
-              <td class="text-secondary">${item.capacity} units</td>
-              <td>${badgeHtml(stock.label, stock.variant)}</td>
-              <td class="text-secondary">${item.expiring > 0 ? `${item.expiring} units` : "—"}</td>
-            </tr>
-          `;
-        }).join("");
-      }
-
-      invSearch.addEventListener("input", renderInventory);
-      statusFilter.addEventListener("change", renderInventory);
-      invClearBtn.addEventListener("click", () => {
-        invSearch.value = "";
-        statusFilter.value = "";
-        renderInventory();
-      });
-
-      renderInventory();
-    });
-  </script>
+  <script src="../assets/js/inventory.js"></script>
 </body>
 </html>

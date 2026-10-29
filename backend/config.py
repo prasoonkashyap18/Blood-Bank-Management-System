@@ -41,6 +41,11 @@ class Config:
 
     JSON_SORT_KEYS = False
 
+    # A blood group's usable stock below this many units is flagged "low stock".
+    INVENTORY_LOW_STOCK_THRESHOLD = int(os.environ.get("INVENTORY_LOW_STOCK_THRESHOLD", "10"))
+    # A batch expiring within this many days (and not yet expired) is flagged "near expiry".
+    INVENTORY_NEAR_EXPIRY_DAYS = int(os.environ.get("INVENTORY_NEAR_EXPIRY_DAYS", "7"))
+
 
 class TestConfig(Config):
     """Configuration used by the automated test suite."""

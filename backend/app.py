@@ -14,6 +14,8 @@ from . import database
 from .admin import admin_bp
 from .auth import auth_bp
 from .config import Config
+from .donors import donors_bp
+from .inventory import inventory_bp
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
@@ -28,6 +30,8 @@ def create_app(config_class: type = Config) -> Flask:
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(admin_bp)
+    app.register_blueprint(donors_bp)
+    app.register_blueprint(inventory_bp)
 
     _register_frontend_routes(app)
     _register_error_handlers(app)

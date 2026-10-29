@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from datetime import date
 from functools import wraps
 
@@ -12,12 +11,9 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from . import models
 from .database import get_db
+from .validators import BLOOD_GROUPS, EMAIL_RE, PHONE_RE
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
-
-EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-PHONE_RE = re.compile(r"^[0-9+\-\s]{7,15}$")
-BLOOD_GROUPS = {"A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"}
 
 
 # ---------------------------------------------------------------------------
@@ -160,6 +156,7 @@ def register():
         db,
         user_id=user_id,
         full_name=data["fullName"].strip(),
+        email=email,
         blood_group=data["bloodGroup"].strip(),
         phone=data["phone"].strip(),
         city=data["city"].strip(),

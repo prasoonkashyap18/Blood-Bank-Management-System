@@ -28,16 +28,19 @@ CREATE TABLE IF NOT EXISTS donors (
     id                  INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id             INTEGER UNIQUE REFERENCES users(id) ON DELETE SET NULL,
     full_name           TEXT NOT NULL,
+    email               TEXT,
     blood_group         TEXT NOT NULL CHECK (blood_group IN ('A+','A-','B+','B-','AB+','AB-','O+','O-')),
     phone               TEXT NOT NULL,
     city                TEXT NOT NULL,
     last_donation_date  TEXT,
     consent_given       INTEGER NOT NULL DEFAULT 0 CHECK (consent_given IN (0, 1)),
     status              TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
-    created_at          TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    created_at          TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    updated_at          TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
 CREATE INDEX IF NOT EXISTS idx_donors_blood_group ON donors(blood_group);
 CREATE INDEX IF NOT EXISTS idx_donors_city ON donors(city);
+CREATE INDEX IF NOT EXISTS idx_donors_status ON donors(status);
 
 CREATE TABLE IF NOT EXISTS blood_inventory (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -45,10 +48,13 @@ CREATE TABLE IF NOT EXISTS blood_inventory (
     quantity_units  INTEGER NOT NULL DEFAULT 0 CHECK (quantity_units >= 0),
     collected_date  TEXT,
     expiry_date     TEXT,
+    status          TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'archived')),
+    notes           TEXT,
     created_at      TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now')),
     updated_at      TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
 CREATE INDEX IF NOT EXISTS idx_inventory_blood_group ON blood_inventory(blood_group);
+CREATE INDEX IF NOT EXISTS idx_inventory_status ON blood_inventory(status);
 
 CREATE TABLE IF NOT EXISTS blood_requests (
     id                  INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -85,18 +91,80 @@ def _connect(db_path) -> sqlite3.Connection:
     return conn
 
 
+# Columns added after a table's initial release, for databases created by an
+# earlier version of the app. Each entry is plain "ADD COLUMN" DDL — additive
+# only, never a destructive rebuild, and safe to attempt on every startup
+# since _migrate() only applies a column that is actually missing.
+MIGRATIONS = {
+    "donors": [
+        "ALTER TABLE donors ADD COLUMN email TEXT",
+        # SQLite's ADD COLUMN only accepts a constant default, so this one is
+        # added nullable and backfilled with an UPDATE just below.
+        "ALTER TABLE donors ADD COLUMN updated_at TEXT",
+    ],
+    "blood_inventory": [
+        "ALTER TABLE blood_inventory ADD COLUMN status TEXT NOT NULL DEFAULT 'active'",
+        "ALTER TABLE blood_inventory ADD COLUMN notes TEXT",
+    ],
+}
+
+# Backfill for columns above that couldn't use a computed default inline.
+BACKFILLS = [
+    "UPDATE donors SET updated_at = created_at WHERE updated_at IS NULL",
+]
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    """Add any columns introduced after a table was first created.
+
+    Reads each table's current columns with PRAGMA table_info and only runs
+    the ALTER TABLE statements for columns that are actually missing, so
+    re-running this against an already-migrated or brand-new database (where
+    executescript(SCHEMA) already created the columns) is a no-op.
+    """
+    for table, statements in MIGRATIONS.items():
+        existing_tables = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?", (table,)
+        ).fetchone()
+        if not existing_tables:
+            continue  # a brand-new database: executescript(SCHEMA) already has the final shape
+
+        existing_columns = {row["name"] for row in conn.execute(f"PRAGMA table_info({table})")}
+        for statement in statements:
+            # Each statement is "ALTER TABLE <table> ADD COLUMN <col> ..."; pull <col> out to check it.
+            column_name = statement.split("ADD COLUMN", 1)[1].strip().split()[0]
+            if column_name not in existing_columns:
+                conn.execute(statement)
+    conn.commit()
+
+
+def _backfill(conn: sqlite3.Connection) -> None:
+    """Fill in values for columns added by _migrate(), after tables are guaranteed to exist."""
+    for statement in BACKFILLS:
+        conn.execute(statement)
+    conn.commit()
+
+
 def init_db(db_path) -> None:
-    """Create the database file and tables if they do not already exist.
+    """Create the database file and tables if they do not already exist,
+    then apply any additive column migrations for pre-existing databases.
 
     Safe to call every time the application starts: CREATE TABLE IF NOT
-    EXISTS never touches existing tables or rows.
+    EXISTS and the additive ALTER TABLE migrations never touch existing
+    rows, and never run twice for the same column.
     """
     path = Path(db_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     conn = _connect(path)
     try:
+        # Add any columns a pre-existing table is missing *before* running
+        # the schema script, since that script's CREATE INDEX statements
+        # reference columns (e.g. blood_inventory.status) that only exist
+        # on an old database once the migration below has added them.
+        _migrate(conn)
         conn.executescript(SCHEMA)
         conn.commit()
+        _backfill(conn)
     finally:
         conn.close()
 

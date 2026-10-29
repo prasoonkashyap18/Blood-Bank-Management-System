@@ -12,7 +12,7 @@
 
   <div class="demo-banner no-print">
     <i class="bi bi-info-circle"></i>
-    Demo Mode — these are fictional sample donors, not real, verified, or currently available people.
+    This directory reads real donor records from the database (Step 3). Seed donors are fictional demonstration data; contact details and donation history are only visible to a donor's own account or an administrator.
   </div>
 
   <nav class="navbar navbar-expand-lg navbar-bb sticky-top no-print">
@@ -44,21 +44,21 @@
         <div>
           <span class="section-eyebrow">Donor directory</span>
           <h1 class="h3 mt-1 mb-1">Find a blood donor</h1>
-          <p class="text-secondary mb-0">Sample directory for demonstration purposes only. Contact details shown are fictional.</p>
+          <p class="text-secondary mb-0">Searches the real donor database. Some seed records are fictional demonstration data.</p>
         </div>
       </div>
 
       <!-- Filters -->
       <div class="bb-card p-3 p-md-4 mb-4">
         <div class="row g-3 align-items-end">
-          <div class="col-md-5">
+          <div class="col-md-4">
             <label for="searchInput" class="form-label">Search by name</label>
             <div class="input-group">
               <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
               <input type="text" class="form-control" id="searchInput" placeholder="Search donor name...">
             </div>
           </div>
-          <div class="col-6 col-md-3">
+          <div class="col-6 col-md-2">
             <label for="bloodGroupFilter" class="form-label">Blood group</label>
             <select class="form-select" id="bloodGroupFilter">
               <option value="">All groups</option>
@@ -66,11 +66,18 @@
           </div>
           <div class="col-6 col-md-3">
             <label for="cityFilter" class="form-label">City</label>
-            <select class="form-select" id="cityFilter">
-              <option value="">All cities</option>
+            <input type="text" class="form-control" id="cityFilter" placeholder="Any city">
+          </div>
+          <div class="col-6 col-md-2">
+            <label for="statusFilter" class="form-label">Status</label>
+            <select class="form-select" id="statusFilter">
+              <option value="">All statuses</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
             </select>
           </div>
-          <div class="col-12 col-md-1 d-grid">
+          <div class="col-6 col-md-1 d-grid">
             <button type="button" class="btn btn-outline-secondary" id="clearFiltersBtn" title="Clear filters">
               <i class="bi bi-x-circle"></i>
             </button>
@@ -79,38 +86,73 @@
       </div>
 
       <div class="d-flex justify-content-between align-items-center mb-3">
-        <p class="text-secondary small mb-0" id="resultsCount">Showing all donors</p>
+        <p class="text-secondary small mb-0" id="resultsCount">Loading donors...</p>
+      </div>
+
+      <!-- Loading / error states -->
+      <div class="text-center py-5 text-secondary" id="loadingState">
+        <div class="spinner-border" role="status"></div>
+        <p class="mt-2 mb-0">Loading donors...</p>
+      </div>
+      <div class="alert alert-danger d-none" id="errorState" role="alert">
+        <i class="bi bi-exclamation-triangle me-1"></i>
+        Could not load the donor directory. Is the backend running?
       </div>
 
       <!-- Results -->
-      <div class="bb-card p-0 overflow-hidden">
-        <div class="table-responsive d-none d-md-block">
-          <table class="table table-bb mb-0" id="donorsTable">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Blood group</th>
-                <th>City</th>
-                <th>Contact</th>
-                <th>Last donation</th>
-              </tr>
-            </thead>
-            <tbody id="donorsTableBody"></tbody>
-          </table>
+      <div id="resultsWrapper" class="d-none">
+        <div class="bb-card p-0 overflow-hidden">
+          <div class="table-responsive d-none d-md-block">
+            <table class="table table-bb mb-0" id="donorsTable">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Blood group</th>
+                  <th>City</th>
+                  <th>Status</th>
+                  <th>Last donation</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="donorsTableBody"></tbody>
+            </table>
+          </div>
+          <!-- Mobile cards -->
+          <div class="d-md-none p-3" id="donorsCardList"></div>
         </div>
-        <!-- Mobile cards -->
-        <div class="d-md-none p-3" id="donorsCardList"></div>
-        <div class="empty-state d-none" id="emptyState">
-          <i class="bi bi-person-x d-block"></i>
-          <p class="mb-0 mt-2">No donors match your search. Try adjusting your filters.</p>
+        <div class="d-flex justify-content-end gap-2 mt-3">
+          <button type="button" class="btn btn-outline-secondary btn-sm" id="prevPageBtn">
+            <i class="bi bi-chevron-left"></i> Previous
+          </button>
+          <button type="button" class="btn btn-outline-secondary btn-sm" id="nextPageBtn">
+            Next <i class="bi bi-chevron-right"></i>
+          </button>
         </div>
+      </div>
+
+      <div class="empty-state d-none" id="emptyState">
+        <i class="bi bi-person-x d-block"></i>
+        <p class="mb-0 mt-2">No donors match your search. Try adjusting your filters.</p>
       </div>
     </div>
   </main>
 
+  <!-- Donor detail modal -->
+  <div class="modal fade" id="donorDetailModal" tabindex="-1" aria-labelledby="donorDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title h5" id="donorDetailModalLabel">Donor details</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="donorDetailBody"></div>
+      </div>
+    </div>
+  </div>
+
   <footer class="footer-bb py-4 no-print mt-5">
     <div class="container text-center small">
-      &copy; 2026 LifeDrop Blood Bank &amp; Donor Management System &mdash; Mini Project, Step 1 (Frontend Prototype).
+      &copy; 2026 LifeDrop Blood Bank &amp; Donor Management System &mdash; Mini Project, Step 3 (Donor Management &amp; Inventory).
     </div>
   </footer>
 
@@ -118,82 +160,6 @@
   <script src="../assets/js/mock-data.js"></script>
   <script src="../assets/js/main.js"></script>
   <script src="../assets/js/auth.js"></script>
-  <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const bloodGroupFilter = document.getElementById("bloodGroupFilter");
-      const cityFilter = document.getElementById("cityFilter");
-      const searchInput = document.getElementById("searchInput");
-      const clearFiltersBtn = document.getElementById("clearFiltersBtn");
-      const tableBody = document.getElementById("donorsTableBody");
-      const cardList = document.getElementById("donorsCardList");
-      const resultsCount = document.getElementById("resultsCount");
-      const emptyState = document.getElementById("emptyState");
-
-      BLOOD_GROUPS.forEach((bg) => {
-        bloodGroupFilter.insertAdjacentHTML("beforeend", `<option value="${bg}">${bg}</option>`);
-      });
-
-      [...new Set(MOCK_DONORS.map((d) => d.city))].sort().forEach((city) => {
-        cityFilter.insertAdjacentHTML("beforeend", `<option value="${escapeHtml(city)}">${escapeHtml(city)}</option>`);
-      });
-
-      function renderDonors() {
-        const query = searchInput.value.trim().toLowerCase();
-        const bg = bloodGroupFilter.value;
-        const city = cityFilter.value;
-
-        const filtered = MOCK_DONORS.filter((d) => {
-          const matchesQuery = !query || d.name.toLowerCase().includes(query);
-          const matchesBg = !bg || d.bloodGroup === bg;
-          const matchesCity = !city || d.city === city;
-          return matchesQuery && matchesBg && matchesCity;
-        });
-
-        resultsCount.textContent = `Showing ${filtered.length} of ${MOCK_DONORS.length} donors`;
-
-        if (filtered.length === 0) {
-          tableBody.innerHTML = "";
-          cardList.innerHTML = "";
-          emptyState.classList.remove("d-none");
-          return;
-        }
-        emptyState.classList.add("d-none");
-
-        tableBody.innerHTML = filtered.map((d) => `
-          <tr>
-            <td class="fw-medium">${escapeHtml(d.name)}</td>
-            <td><span class="badge text-bg-danger-subtle text-danger-emphasis border border-danger-subtle">${d.bloodGroup}</span></td>
-            <td>${escapeHtml(d.city)}</td>
-            <td class="small text-secondary">${escapeHtml(d.phone)}</td>
-            <td class="small text-secondary">${escapeHtml(d.lastDonation)}</td>
-          </tr>
-        `).join("");
-
-        cardList.innerHTML = filtered.map((d) => `
-          <div class="bb-card p-3 mb-3">
-            <div class="d-flex justify-content-between align-items-start">
-              <h3 class="h6 mb-1">${escapeHtml(d.name)}</h3>
-              <span class="badge text-bg-danger-subtle text-danger-emphasis border border-danger-subtle">${d.bloodGroup}</span>
-            </div>
-            <p class="small text-secondary mb-1"><i class="bi bi-geo-alt me-1"></i>${escapeHtml(d.city)}</p>
-            <p class="small text-secondary mb-1"><i class="bi bi-telephone me-1"></i>${escapeHtml(d.phone)}</p>
-            <p class="small text-secondary mb-0"><i class="bi bi-calendar-event me-1"></i>Last donation: ${escapeHtml(d.lastDonation)}</p>
-          </div>
-        `).join("");
-      }
-
-      searchInput.addEventListener("input", renderDonors);
-      bloodGroupFilter.addEventListener("change", renderDonors);
-      cityFilter.addEventListener("change", renderDonors);
-      clearFiltersBtn.addEventListener("click", () => {
-        searchInput.value = "";
-        bloodGroupFilter.value = "";
-        cityFilter.value = "";
-        renderDonors();
-      });
-
-      renderDonors();
-    });
-  </script>
+  <script src="../assets/js/donors.js"></script>
 </body>
 </html>
