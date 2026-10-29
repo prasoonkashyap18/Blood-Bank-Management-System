@@ -86,4 +86,8 @@ def _register_error_handlers(app: Flask) -> None:
 
 
 if __name__ == "__main__":
-    create_app().run(debug=True)
+    # The documented way to run this app is `flask --app backend.app run`
+    # (see README.md); this fallback (`python -m backend.app`) intentionally
+    # does not enable Flask's debug mode, which would expose an interactive
+    # in-browser debugger/traceback on unhandled errors.
+    create_app().run()

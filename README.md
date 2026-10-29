@@ -14,17 +14,24 @@ Finding a compatible blood donor quickly, and giving blood banks a clear view of
 - Provide simple reports summarizing donations, inventory, and requests.
 - Build the system incrementally: a working frontend first, then a real backend, database, and authentication.
 
-## Current Implementation Status: Step 4 — Blood Requests, Admin Dashboard & Reports
+## Current Implementation Status: Step 5 — Final Testing & Local Setup (Complete)
 
-Step 1 delivered a frontend prototype with fictional, client-side-only data. Step 2 added a real Flask backend, SQLite database, and authentication. Step 3 made the donor directory and blood inventory real and database-backed. **Step 4 completes the loop: real blood-request submission and admin processing wired to inventory stock deduction, a real admin dashboard, and real reports with CSV export.**
+Step 1 delivered a frontend prototype with fictional, client-side-only data. Step 2 added a real Flask backend, SQLite database, and authentication. Step 3 made the donor directory and blood inventory real and database-backed. Step 4 wired up real blood-request submission/approval/fulfilment (with transactional inventory deduction), a real admin dashboard, and real reports with CSV export. **Step 5 is final testing, a small security hardening pass, and this README being brought up to a standard where someone else can clone the repo onto their own Windows machine and get it running from scratch.** No new features were added in this step — see **Planned Development Stages** below for the full picture.
 
-What's real now (in addition to everything from Steps 2–3):
+What Step 4 delivered (still true, unchanged by Step 5):
 - **Blood requests** (`pages/requests.html`): any logged-in user can submit a request and see their own request history; administrators can search/filter/inspect every request and move it through `Pending → Approved → Fulfilled` or `→ Rejected` (rejection requires a reason). All of this is enforced server-side — a regular user can never view or act on someone else's request, and only an admin can change a status.
 - **Inventory integration:** approving a request checks that enough *usable* (active, unexpired) stock exists; fulfilling one actually deducts it, earliest-expiring batch first, inside a single database transaction with the request's status change — if the deduction fails, nothing is committed, so inventory and the request are left exactly as they were. A second "fulfill" click on an already-fulfilled request is rejected by the status-transition check before it can touch inventory again, so stock is never double-deducted; stock quantities are clamped so they can never go negative.
-- **Admin dashboard** (`pages/admin.html`): every statistic — total donors, available units, pending/approved/fulfilled requests, per-blood-group stock, recent requests, low-stock/expiry alerts — now comes from `GET /api/admin/summary`, computed from the database on every request.
+- **Admin dashboard** (`pages/admin.html`): every statistic — total donors, available units, pending/approved/fulfilled requests, per-blood-group stock, recent requests, low-stock/expiry alerts — comes from `GET /api/admin/summary`, computed from the database on every request.
 - **Reports** (`pages/reports.html`, admin-only): inventory summary, a request-status breakdown with a selectable date range, and a donation summary, all from real data, plus one-click CSV export for the requests and donations reports (generated on the backend from the same authorized, filtered queries — never a plain list of raw database rows, and donor contact details are never included in a donation export).
 
-Nothing from Steps 1–3 was rewritten to build this — the existing auth/session/CSRF/role-based-authorization system, SQLite setup, and donor/inventory endpoints are reused as-is.
+What Step 5 actually changed:
+- Ran the full automated suite and a from-scratch "fresh laptop" simulation (new database, new `.env`, new admin account, new user registration, full request → approve → fulfil → dashboard → report → CSV walk-through) end to end — see **Running the Tests** and the test results reported alongside this change.
+- Replaced two internal `assert`-based column-whitelist checks in `backend/models.py` with explicit `raise ValueError(...)` — `assert` is silently removed when Python runs with the `-O` flag, so it was never a reliable safety boundary; this closes that theoretical gap without changing any observable behavior (both were unreachable with attacker-controlled input even before the fix, since callers only ever pass hardcoded, already-whitelisted keys).
+- Removed `debug=True` from the unused direct-run fallback in `backend/app.py` (`python -m backend.app`) so an interactive debugger/traceback can never be exposed, even accidentally; the documented `flask --app backend.app run` command was never affected.
+- Added the two optional inventory-threshold variables to `.env.example` that were already read by `backend/config.py` but not documented there.
+- Rewrote the README's setup instructions to be copy-paste-accurate for a fresh Windows machine (verified command-by-command against this codebase), added **Stopping and restarting** and **Troubleshooting common setup errors**, and removed a redundant "cloning" section that duplicated step 1 of Setup.
+
+Nothing from Steps 1–4 was rewritten or redesigned to do this — the existing auth/session/CSRF/role-based-authorization system, SQLite setup, and every endpoint are unchanged in behavior.
 
 ## Architecture
 
@@ -197,7 +204,24 @@ python -m flask --app backend.app run
 
 Visit **http://127.0.0.1:5000/** in a browser. Flask serves the existing frontend pages directly, so there is nothing else to start — `index.html`, every page under `pages/`, and the `/api/...` endpoints are all served by this one process.
 
-Log in with the administrator credentials from step 7 to reach `pages/admin.html`, or register a new account via `pages/register.html` to test the regular donor flow.
+Log in with the administrator credentials from step 7 to reach `pages/admin.html`, or register your own new account via `pages/register.html` to test the regular donor flow.
+
+### Stopping and restarting
+
+To stop the server, go to the terminal it's running in and press `Ctrl+C`. Your data is untouched — it's saved in `instance/bloodbank.db` on disk, not held in memory — so the next time you want to use the app, you only need to repeat **step 8** (`python -m flask --app backend.app run`) from inside the activated virtual environment; steps 1–7 are one-time setup and don't need to be repeated. If you open a new terminal, remember to re-activate the virtual environment first (step 2's second command, `.venv\Scripts\activate`) before starting the server again.
+
+### Troubleshooting common setup errors
+
+| Problem | Likely cause / fix |
+|---|---|
+| `'flask' is not recognized` / `ModuleNotFoundError: No module named 'flask'` | The virtual environment isn't activated (or dependencies weren't installed into it). Re-run step 2's activation command, confirm your prompt shows `(.venv)`, then re-run step 3. |
+| PowerShell: activation does nothing, or `running scripts is disabled on this system` | PowerShell's script-execution policy is blocking `Activate.ps1`. Either use `.venv\Scripts\activate` (the `.bat` version, which this README uses and isn't affected), or run Command Prompt (`cmd.exe`) instead of PowerShell for these steps. |
+| `OSError: [Errno 98]` / `OSError: [WinError 10048]` — address already in use | Another process (often a previous server you forgot to stop) is already listening on port 5000. Stop it (`Ctrl+C` in its terminal, or close that terminal), or run this one on a different port: `python -m flask --app backend.app run --port 5050`. |
+| Login/register always fails with a CSRF or "Bad request" error | Normal browser use is unaffected (`assets/js/auth.js` fetches a token automatically). This only happens when scripting the API directly (e.g. `curl`) without first `GET`-ting `/api/auth/csrf-token` and sending it back as the `X-CSRFToken` header — see **API Endpoints** below. |
+| `sqlite3.OperationalError: database is locked` | Another process still has `instance/bloodbank.db` open — close any other running copy of this app (including a previous server you forgot to stop) and try again. |
+| Running `database/init_db.py` or `database/seed_data.py` does nothing visible / says rows already exist | That's expected and correct, not an error — both scripts are idempotent and skip tables that already have data, so re-running them after the first time is always safe and simply confirms nothing changed. |
+| `.env` changes don't seem to take effect | The running server read `.env` at startup. Stop it (`Ctrl+C`) and start it again (step 8) after editing `.env`. |
+| Admin login fails after running `create_admin.py` | Double-check `ADMIN_EMAIL`/`ADMIN_PASSWORD` in `.env` match exactly what you're typing into the login form, and that you re-ran `python database/create_admin.py` *after* saving those changes to `.env`. |
 
 ## API Endpoints
 
@@ -319,6 +343,8 @@ Each test gets its own temporary SQLite database and session directory (via pyte
 - `tests/test_admin_dashboard.py` (4): real counts reflecting the database, correct empty state with no data, and figures updating after an inventory change.
 - `tests/test_reports.py` (13): access control, status/blood-group/date-range filtering, invalid/inverted date rejection, and CSV export content and headers (including that a donation export never includes donor contact details).
 
+Beyond the automated suite, Step 5 also ran a full manual pass against a completely separate, newly-initialized database (a stand-in for a fresh install on someone else's machine): register a new account, log in, provision an admin account, add an inventory batch, submit a request, approve it, fulfil it (confirming the stock deduction), and pull the admin dashboard and a CSV report — all against data that didn't exist beforehand.
+
 ## Security Considerations
 
 - Passwords are hashed with Werkzeug's PBKDF2-based `generate_password_hash`; plaintext passwords are never stored or logged.
@@ -333,6 +359,9 @@ Each test gets its own temporary SQLite database and session directory (via pyte
 - Donor and inventory authorization is re-checked against the database on every request (ownership for donors, `role == 'admin'` for inventory/request/report writes) — a donor ID, request ID, or role value sent by the client is never trusted on its own.
 - Request/inventory status transitions are validated against an explicit allow-list server-side (`backend/validators.REQUEST_TRANSITIONS`), not just hidden in the UI; stock deduction and the status change it belongs to are committed or rolled back together as one transaction.
 - CSV exports are generated on the backend from the same authorized, filtered queries as the JSON report endpoints (never a raw table dump), and the donations export deliberately omits donor phone/email even though the requesting admin could view an individual donor's contact details one at a time elsewhere.
+- Internal column-whitelist checks in `backend/models.py` use `raise ValueError(...)`, not `assert` — `assert` statements are stripped out when Python runs with the `-O` optimization flag, so they can't be relied on as a safety boundary even for an internal invariant.
+- The app never enables Flask's debug mode on the documented run path (`flask --app backend.app run`); the unused `python -m backend.app` fallback was corrected to match, so an interactive in-browser debugger/traceback can't accidentally be exposed either way.
+- Verified (not just assumed): no `.env`, SQLite database, session file, or other sensitive file has ever been committed, in the current tree or anywhere in the Git history (`git ls-files` / `git log --all --diff-filter=A`), and `.env.example` documents every variable the app actually reads with placeholder, non-secret values only.
 
 ## Current Limitations
 
@@ -342,23 +371,15 @@ Each test gets its own temporary SQLite database and session directory (via pyte
 - **Donor/request search pagination is offset-based** (simple Previous/Next or a `limit`/`offset` query), not cursor-based — adequate at this prototype's scale.
 - **No real-time updates** — dashboard and report figures are fetched on page load/filter-change, not pushed live as other users act.
 - **Concurrency is not deeply tested** — the fulfilment transaction is correct for this prototype's single-admin, single-request-at-a-time usage pattern (SQLite itself serializes writes), but true concurrent-admin race conditions were not specifically load-tested.
+- **Honesty note on "another machine" testing:** Step 5's fresh-install verification used a newly initialized database, a fresh `.env`, and a fresh admin account on *this same development machine* — not a literal second physical computer. The setup steps below were written and verified command-by-command against this codebase, but a true first run on different hardware may still surface something OS/environment-specific (see **Troubleshooting**) that this process didn't catch.
 
 ## Planned Development Stages
 
 - **Step 1 — Frontend & project foundation** *(done)*: complete HTML/CSS/JS prototype with mock data.
 - **Step 2 — Flask backend, database, and authentication** *(done)*: Flask API, SQLite database foundation, and real registration/login/logout/session/role-based access, connected to the existing login and registration pages.
 - **Step 3 — Donor management and inventory** *(done)*: real, database-backed donor directory/search/profiles/donation history, and batch-tracked inventory with low-stock/expiry alerts and admin batch management.
-- **Step 4 — Blood requests, dashboard, and reports** *(this step)*: real request submission/approval/rejection/fulfilment wired to transactional inventory deduction, a fully data-driven admin dashboard, and reports with CSV export.
-- **Step 5 — Testing, portability, and finalization**: testing, cleanup, and verifying the project runs on another machine for demonstration.
-
-## Cloning the Repository
-
-```bash
-git clone <repository-url>
-cd "Blood Bank Management System"
-```
-
-Then follow **Setup and Local Execution** above.
+- **Step 4 — Blood requests, dashboard, and reports** *(done)*: real request submission/approval/rejection/fulfilment wired to transactional inventory deduction, a fully data-driven admin dashboard, and reports with CSV export.
+- **Step 5 — Final testing and local setup** *(this step)*: full regression + fresh-machine testing, a small security hardening pass (see above), and setup/troubleshooting documentation accurate enough for someone else to run this on their own Windows laptop with their own local database and admin account.
 
 ## Disclaimer
 

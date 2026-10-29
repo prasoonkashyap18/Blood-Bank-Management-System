@@ -127,7 +127,12 @@ def update_donor(db: sqlite3.Connection, donor_id: int, fields: dict) -> None:
     """Update only the given columns. `fields` keys must be a subset of DONOR_EDITABLE_FIELDS."""
     if not fields:
         return
-    assert set(fields).issubset(DONOR_EDITABLE_FIELDS), "attempted to update a non-whitelisted donor column"
+    if not set(fields).issubset(DONOR_EDITABLE_FIELDS):
+        # A programming error, not user input: callers only ever pass keys
+        # from their own whitelisted validation, never client-supplied keys
+        # directly. Raised (not asserted) so this check still runs even if
+        # the interpreter is started with -O, which strips assert statements.
+        raise ValueError("attempted to update a non-whitelisted donor column")
     assignments = ", ".join(f"{column} = ?" for column in fields)
     values = [*fields.values(), donor_id]
     db.execute(
@@ -308,9 +313,10 @@ def list_inventory_batches(
 def update_inventory_batch(db: sqlite3.Connection, batch_id: int, fields: dict) -> None:
     if not fields:
         return
-    assert set(fields).issubset(
-        INVENTORY_EDITABLE_FIELDS
-    ), "attempted to update a non-whitelisted inventory column"
+    if not set(fields).issubset(INVENTORY_EDITABLE_FIELDS):
+        # See the matching note in update_donor() above: raised rather than
+        # asserted so this check isn't silently skipped under -O.
+        raise ValueError("attempted to update a non-whitelisted inventory column")
     assignments = ", ".join(f"{column} = ?" for column in fields)
     values = [*fields.values(), batch_id]
     db.execute(
