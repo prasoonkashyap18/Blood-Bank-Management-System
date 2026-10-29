@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Donor Directory | LifeDrop</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+
+  <div class="demo-banner no-print">
+    <i class="bi bi-info-circle"></i>
+    Demo Mode — these are fictional sample donors, not real, verified, or currently available people.
+  </div>
+
+  <nav class="navbar navbar-expand-lg navbar-bb sticky-top no-print">
+    <div class="container">
+      <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="../index.html">
+        <span class="brand-mark"><i class="bi bi-droplet-fill"></i></span>
+        LifeDrop
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="mainNav">
+        <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-2">
+          <li class="nav-item"><a class="nav-link" data-nav-link="index.html" href="../index.html">Home</a></li>
+          <li class="nav-item"><a class="nav-link" data-nav-link="donors.html" href="donors.html">Find Donors</a></li>
+          <li class="nav-item"><a class="nav-link" data-nav-link="inventory.html" href="inventory.html">Inventory</a></li>
+          <li class="nav-item"><a class="nav-link" data-nav-link="requests.html" href="requests.html">Requests</a></li>
+          <li class="nav-item"><a class="nav-link" data-nav-link="reports.html" href="reports.html">Reports</a></li>
+          <li class="nav-item"><a class="nav-link" data-nav-link="admin.html" href="admin.html">Admin</a></li>
+          <li class="nav-item"><a class="btn btn-bb-primary btn-sm" href="register.html">Become a Donor</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <main class="py-5">
+    <div class="container">
+      <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
+        <div>
+          <span class="section-eyebrow">Donor directory</span>
+          <h1 class="h3 mt-1 mb-1">Find a blood donor</h1>
+          <p class="text-secondary mb-0">Sample directory for demonstration purposes only. Contact details shown are fictional.</p>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="bb-card p-3 p-md-4 mb-4">
+        <div class="row g-3 align-items-end">
+          <div class="col-md-5">
+            <label for="searchInput" class="form-label">Search by name</label>
+            <div class="input-group">
+              <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+              <input type="text" class="form-control" id="searchInput" placeholder="Search donor name...">
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <label for="bloodGroupFilter" class="form-label">Blood group</label>
+            <select class="form-select" id="bloodGroupFilter">
+              <option value="">All groups</option>
+            </select>
+          </div>
+          <div class="col-6 col-md-3">
+            <label for="cityFilter" class="form-label">City</label>
+            <select class="form-select" id="cityFilter">
+              <option value="">All cities</option>
+            </select>
+          </div>
+          <div class="col-12 col-md-1 d-grid">
+            <button type="button" class="btn btn-outline-secondary" id="clearFiltersBtn" title="Clear filters">
+              <i class="bi bi-x-circle"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <p class="text-secondary small mb-0" id="resultsCount">Showing all donors</p>
+      </div>
+
+      <!-- Results -->
+      <div class="bb-card p-0 overflow-hidden">
+        <div class="table-responsive d-none d-md-block">
+          <table class="table table-bb mb-0" id="donorsTable">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Blood group</th>
+                <th>City</th>
+                <th>Contact</th>
+                <th>Last donation</th>
+              </tr>
+            </thead>
+            <tbody id="donorsTableBody"></tbody>
+          </table>
+        </div>
+        <!-- Mobile cards -->
+        <div class="d-md-none p-3" id="donorsCardList"></div>
+        <div class="empty-state d-none" id="emptyState">
+          <i class="bi bi-person-x d-block"></i>
+          <p class="mb-0 mt-2">No donors match your search. Try adjusting your filters.</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer-bb py-4 no-print mt-5">
+    <div class="container text-center small">
+      &copy; 2026 LifeDrop Blood Bank &amp; Donor Management System &mdash; Mini Project, Step 1 (Frontend Prototype).
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="../assets/js/mock-data.js"></script>
+  <script src="../assets/js/main.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const bloodGroupFilter = document.getElementById("bloodGroupFilter");
+      const cityFilter = document.getElementById("cityFilter");
+      const searchInput = document.getElementById("searchInput");
+      const clearFiltersBtn = document.getElementById("clearFiltersBtn");
+      const tableBody = document.getElementById("donorsTableBody");
+      const cardList = document.getElementById("donorsCardList");
+      const resultsCount = document.getElementById("resultsCount");
+      const emptyState = document.getElementById("emptyState");
+
+      BLOOD_GROUPS.forEach((bg) => {
+        bloodGroupFilter.insertAdjacentHTML("beforeend", `<option value="${bg}">${bg}</option>`);
+      });
+
+      [...new Set(MOCK_DONORS.map((d) => d.city))].sort().forEach((city) => {
+        cityFilter.insertAdjacentHTML("beforeend", `<option value="${escapeHtml(city)}">${escapeHtml(city)}</option>`);
+      });
+
+      function renderDonors() {
+        const query = searchInput.value.trim().toLowerCase();
+        const bg = bloodGroupFilter.value;
+        const city = cityFilter.value;
+
+        const filtered = MOCK_DONORS.filter((d) => {
+          const matchesQuery = !query || d.name.toLowerCase().includes(query);
+          const matchesBg = !bg || d.bloodGroup === bg;
+          const matchesCity = !city || d.city === city;
+          return matchesQuery && matchesBg && matchesCity;
+        });
+
+        resultsCount.textContent = `Showing ${filtered.length} of ${MOCK_DONORS.length} donors`;
+
+        if (filtered.length === 0) {
+          tableBody.innerHTML = "";
+          cardList.innerHTML = "";
+          emptyState.classList.remove("d-none");
+          return;
+        }
+        emptyState.classList.add("d-none");
+
+        tableBody.innerHTML = filtered.map((d) => `
+          <tr>
+            <td class="fw-medium">${escapeHtml(d.name)}</td>
+            <td><span class="badge text-bg-danger-subtle text-danger-emphasis border border-danger-subtle">${d.bloodGroup}</span></td>
+            <td>${escapeHtml(d.city)}</td>
+            <td class="small text-secondary">${escapeHtml(d.phone)}</td>
+            <td class="small text-secondary">${escapeHtml(d.lastDonation)}</td>
+          </tr>
+        `).join("");
+
+        cardList.innerHTML = filtered.map((d) => `
+          <div class="bb-card p-3 mb-3">
+            <div class="d-flex justify-content-between align-items-start">
+              <h3 class="h6 mb-1">${escapeHtml(d.name)}</h3>
+              <span class="badge text-bg-danger-subtle text-danger-emphasis border border-danger-subtle">${d.bloodGroup}</span>
+            </div>
+            <p class="small text-secondary mb-1"><i class="bi bi-geo-alt me-1"></i>${escapeHtml(d.city)}</p>
+            <p class="small text-secondary mb-1"><i class="bi bi-telephone me-1"></i>${escapeHtml(d.phone)}</p>
+            <p class="small text-secondary mb-0"><i class="bi bi-calendar-event me-1"></i>Last donation: ${escapeHtml(d.lastDonation)}</p>
+          </div>
+        `).join("");
+      }
+
+      searchInput.addEventListener("input", renderDonors);
+      bloodGroupFilter.addEventListener("change", renderDonors);
+      cityFilter.addEventListener("change", renderDonors);
+      clearFiltersBtn.addEventListener("click", () => {
+        searchInput.value = "";
+        bloodGroupFilter.value = "";
+        cityFilter.value = "";
+        renderDonors();
+      });
+
+      renderDonors();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,236 @@
+/* ==========================================================================
+   Blood Bank & Donor Management System — shared styles
+   ========================================================================== */
+
+:root {
+  --bb-red: #b3261e;
+  --bb-red-dark: #8c1d17;
+  --bb-red-light: #fdeceb;
+  --bb-navy: #1f2937;
+  --bb-navy-soft: #4b5563;
+  --bb-bg: #f7f7f8;
+  --bb-surface: #ffffff;
+  --bb-border: #e5e7eb;
+  --bb-radius: 0.75rem;
+  --bb-shadow: 0 2px 10px rgba(17, 24, 39, 0.06);
+  --bb-shadow-hover: 0 8px 24px rgba(17, 24, 39, 0.10);
+}
+
+* { scroll-behavior: smooth; }
+
+body {
+  font-family: "Segoe UI", Roboto, system-ui, -apple-system, sans-serif;
+  background-color: var(--bb-bg);
+  color: var(--bb-navy);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+main { flex: 1 0 auto; }
+
+a { color: var(--bb-red); }
+a:hover { color: var(--bb-red-dark); }
+
+:focus-visible {
+  outline: 3px solid var(--bb-red);
+  outline-offset: 2px;
+}
+
+/* ---------- Navbar ---------- */
+.navbar-bb {
+  background-color: var(--bb-surface);
+  border-bottom: 1px solid var(--bb-border);
+}
+
+.brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.5rem;
+  background-color: var(--bb-red);
+  color: #fff;
+  font-weight: 700;
+}
+
+.navbar-bb .nav-link {
+  color: var(--bb-navy-soft);
+  font-weight: 500;
+}
+
+.navbar-bb .nav-link.active,
+.navbar-bb .nav-link:hover {
+  color: var(--bb-red);
+}
+
+/* ---------- Demo-mode banner ---------- */
+.demo-banner {
+  background-color: var(--bb-red-light);
+  border-bottom: 1px solid #f3c6c3;
+  color: var(--bb-red-dark);
+  font-size: 0.875rem;
+  padding: 0.5rem 0;
+  text-align: center;
+}
+
+/* ---------- Hero ---------- */
+.hero {
+  background: linear-gradient(180deg, #fff 0%, var(--bb-bg) 100%);
+  border-bottom: 1px solid var(--bb-border);
+}
+
+.hero h1 { font-weight: 700; letter-spacing: -0.02em; }
+
+/* ---------- Cards ---------- */
+.bb-card {
+  background-color: var(--bb-surface);
+  border: 1px solid var(--bb-border);
+  border-radius: var(--bb-radius);
+  box-shadow: var(--bb-shadow);
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.bb-card:hover { box-shadow: var(--bb-shadow-hover); }
+
+.stat-card .stat-value {
+  font-size: 1.9rem;
+  font-weight: 700;
+  color: var(--bb-navy);
+}
+
+.stat-card .stat-label {
+  color: var(--bb-navy-soft);
+  font-size: 0.875rem;
+}
+
+/* ---------- Blood group chips ---------- */
+.bg-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  background-color: var(--bb-surface);
+  border: 1px solid var(--bb-border);
+  border-radius: var(--bb-radius);
+  padding: 1rem 0.5rem;
+  text-align: center;
+}
+
+.bg-chip .bg-symbol {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--bb-red);
+}
+
+.bg-chip .bg-count {
+  font-size: 0.8rem;
+  color: var(--bb-navy-soft);
+}
+
+/* ---------- Buttons ---------- */
+.btn-bb-primary {
+  background-color: var(--bb-red);
+  border-color: var(--bb-red);
+  color: #fff;
+}
+
+.btn-bb-primary:hover {
+  background-color: var(--bb-red-dark);
+  border-color: var(--bb-red-dark);
+  color: #fff;
+}
+
+.btn-bb-outline {
+  border-color: var(--bb-red);
+  color: var(--bb-red);
+}
+
+.btn-bb-outline:hover {
+  background-color: var(--bb-red);
+  color: #fff;
+}
+
+/* ---------- Forms ---------- */
+.form-label { font-weight: 500; color: var(--bb-navy); }
+.required-asterisk { color: var(--bb-red); }
+
+.password-field { position: relative; }
+.password-toggle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  padding: 0 0.9rem;
+  background: transparent;
+  border: none;
+  color: var(--bb-navy-soft);
+}
+.password-toggle:hover { color: var(--bb-red); }
+
+/* ---------- Tables ---------- */
+.table-bb thead th {
+  background-color: var(--bb-bg);
+  color: var(--bb-navy-soft);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-bottom: 2px solid var(--bb-border);
+}
+
+.table-bb td, .table-bb th { vertical-align: middle; }
+
+/* ---------- Empty state ---------- */
+.empty-state {
+  padding: 3rem 1rem;
+  text-align: center;
+  color: var(--bb-navy-soft);
+}
+.empty-state .bi { font-size: 2.5rem; color: var(--bb-border); }
+
+/* ---------- Sidebar (admin) ---------- */
+.bb-sidebar {
+  background-color: var(--bb-surface);
+  border-right: 1px solid var(--bb-border);
+  min-height: 100%;
+}
+
+.bb-sidebar .nav-link {
+  color: var(--bb-navy-soft);
+  border-radius: 0.5rem;
+  padding: 0.6rem 0.9rem;
+  font-weight: 500;
+}
+
+.bb-sidebar .nav-link.active {
+  background-color: var(--bb-red-light);
+  color: var(--bb-red-dark);
+}
+
+.bb-sidebar .nav-link:hover:not(.active) {
+  background-color: var(--bb-bg);
+}
+
+/* ---------- Footer ---------- */
+.footer-bb {
+  background-color: var(--bb-navy);
+  color: #d1d5db;
+}
+.footer-bb a { color: #e5e7eb; text-decoration: none; }
+.footer-bb a:hover { color: #fff; text-decoration: underline; }
+
+/* ---------- Utility ---------- */
+.section-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.78rem;
+  color: var(--bb-red);
+  font-weight: 700;
+}
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff; }
+}

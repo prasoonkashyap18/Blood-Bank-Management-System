@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Donor Registration | LifeDrop</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+
+  <div class="demo-banner no-print">
+    <i class="bi bi-info-circle"></i>
+    Demo Mode — registrations are validated in the browser only and are not saved anywhere.
+  </div>
+
+  <nav class="navbar navbar-expand-lg navbar-bb sticky-top no-print">
+    <div class="container">
+      <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="../index.html">
+        <span class="brand-mark"><i class="bi bi-droplet-fill"></i></span>
+        LifeDrop
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="mainNav">
+        <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-2">
+          <li class="nav-item"><a class="nav-link" data-nav-link="index.html" href="../index.html">Home</a></li>
+          <li class="nav-item"><a class="nav-link" data-nav-link="donors.html" href="donors.html">Find Donors</a></li>
+          <li class="nav-item"><a class="nav-link" data-nav-link="inventory.html" href="inventory.html">Inventory</a></li>
+          <li class="nav-item"><a class="nav-link" data-nav-link="requests.html" href="requests.html">Requests</a></li>
+          <li class="nav-item"><a class="nav-link" data-nav-link="reports.html" href="reports.html">Reports</a></li>
+          <li class="nav-item"><a class="nav-link" data-nav-link="admin.html" href="admin.html">Admin</a></li>
+          <li class="nav-item"><a class="btn btn-bb-outline btn-sm" href="login.html">Log In</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <main class="py-5">
+    <div class="container" style="max-width: 640px;">
+      <div class="bb-card p-4 p-md-5">
+        <div class="text-center mb-4">
+          <span class="brand-mark mb-2 d-inline-flex"><i class="bi bi-heart-fill"></i></span>
+          <h1 class="h4 mt-2 mb-1">Become a donor</h1>
+          <p class="text-secondary small mb-0">Join the LifeDrop donor directory. Fields marked <span class="required-asterisk">*</span> are required.</p>
+        </div>
+
+        <div id="registerSuccess" class="alert alert-success d-none" role="alert">
+          <i class="bi bi-check-circle me-1"></i>
+          Demo registration successful! In this prototype no data is actually stored — a real account will be created once the backend (Step 2) is connected.
+        </div>
+
+        <form novalidate data-validate data-success-target="registerSuccess" data-extra-validator="validateRegisterForm" id="registerForm">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label for="fullName" class="form-label">Full name <span class="required-asterisk">*</span></label>
+              <input type="text" class="form-control" id="fullName" name="fullName" required minlength="2" placeholder="e.g. Aarav Sharma">
+              <div class="invalid-feedback">Please enter your full name.</div>
+            </div>
+            <div class="col-md-6">
+              <label for="bloodGroup" class="form-label">Blood group <span class="required-asterisk">*</span></label>
+              <select class="form-select" id="bloodGroup" name="bloodGroup" required>
+                <option value="" selected disabled>Select your blood group</option>
+                <option>A+</option><option>A-</option>
+                <option>B+</option><option>B-</option>
+                <option>AB+</option><option>AB-</option>
+                <option>O+</option><option>O-</option>
+              </select>
+              <div class="invalid-feedback">Please select your blood group.</div>
+            </div>
+
+            <div class="col-md-6">
+              <label for="regEmail" class="form-label">Email address <span class="required-asterisk">*</span></label>
+              <input type="email" class="form-control" id="regEmail" name="email" required placeholder="you@example.com">
+              <div class="invalid-feedback">Please enter a valid email address.</div>
+            </div>
+            <div class="col-md-6">
+              <label for="regPhone" class="form-label">Phone number <span class="required-asterisk">*</span></label>
+              <input type="tel" class="form-control" id="regPhone" name="phone" required pattern="^[0-9+\-\s]{7,15}$" placeholder="e.g. 98XXXXXXXX">
+              <div class="invalid-feedback">Please enter a valid phone number (7–15 digits).</div>
+            </div>
+
+            <div class="col-md-6">
+              <label for="regCity" class="form-label">City / location <span class="required-asterisk">*</span></label>
+              <input type="text" class="form-control" id="regCity" name="city" required placeholder="e.g. Pune">
+              <div class="invalid-feedback">Please enter your city or location.</div>
+            </div>
+            <div class="col-md-6">
+              <label for="lastDonation" class="form-label">Last donation date <span class="text-secondary small">(optional)</span></label>
+              <input type="date" class="form-control" id="lastDonation" name="lastDonation" max="">
+              <div class="form-text">Leave blank if this would be your first donation.</div>
+            </div>
+
+            <div class="col-md-6">
+              <label for="regPassword" class="form-label">Password <span class="required-asterisk">*</span></label>
+              <div class="password-field">
+                <input type="password" class="form-control" id="regPassword" name="password" required minlength="6" placeholder="At least 6 characters">
+                <button class="password-toggle" type="button" data-password-toggle="regPassword" aria-label="Show password">
+                  <i class="bi bi-eye" aria-hidden="true"></i>
+                </button>
+                <div class="invalid-feedback">Password must be at least 6 characters.</div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label for="confirmPassword" class="form-label">Confirm password <span class="required-asterisk">*</span></label>
+              <div class="password-field">
+                <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" required minlength="6" placeholder="Re-enter your password">
+                <button class="password-toggle" type="button" data-password-toggle="confirmPassword" aria-label="Show password">
+                  <i class="bi bi-eye" aria-hidden="true"></i>
+                </button>
+                <div class="invalid-feedback" id="confirmPasswordFeedback">Passwords do not match.</div>
+              </div>
+            </div>
+
+            <div class="col-12">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="consent" name="consent" required>
+                <label class="form-check-label small" for="consent">
+                  I consent to being listed in the LifeDrop donor directory and understand this is a demonstration system. <span class="required-asterisk">*</span>
+                </label>
+                <div class="invalid-feedback">You must provide consent to register.</div>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-bb-primary w-100 py-2 mt-4">Register as Donor</button>
+
+          <p class="text-center small text-secondary mt-4 mb-0">
+            Already registered? <a href="login.html">Log in instead</a>
+          </p>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer-bb py-4 no-print mt-auto">
+    <div class="container text-center small">
+      &copy; 2026 LifeDrop Blood Bank &amp; Donor Management System &mdash; Mini Project, Step 1 (Frontend Prototype).
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="../assets/js/mock-data.js"></script>
+  <script src="../assets/js/main.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const lastDonationInput = document.getElementById("lastDonation");
+      if (lastDonationInput) {
+        lastDonationInput.max = new Date().toISOString().split("T")[0];
+      }
+    });
+
+    /** Extra cross-field validation: confirm password must match password. Returns true if valid. */
+    function validateRegisterForm(form) {
+      const password = form.querySelector("#regPassword");
+      const confirm = form.querySelector("#confirmPassword");
+      const matches = password.value === confirm.value && confirm.value.length > 0;
+      confirm.setCustomValidity(matches ? "" : "mismatch");
+      return matches;
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LifeDrop | Blood Bank &amp; Donor Management System</title>
+  <meta name="description" content="A demonstration blood bank and donor management system prototype." />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+  <div class="demo-banner no-print">
+    <i class="bi bi-info-circle"></i>
+    Demo Mode — all statistics, donors, inventory, and requests on this site are fictional sample data.
+  </div>
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-bb sticky-top no-print">
+    <div class="container">
+      <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="index.html">
+        <span class="brand-mark"><i class="bi bi-droplet-fill"></i></span>
+        LifeDrop
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="mainNav">
+        <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-2">
+          <li class="nav-item"><a class="nav-link" data-nav-link="index.html" href="index.html">Home</a></li>
+          <li class="nav-item"><a class="nav-link" data-nav-link="donors.html" href="pages/donors.html">Find Donors</a></li>
+          <li class="nav-item"><a class="nav-link" data-nav-link="inventory.html" href="pages/inventory.html">Inventory</a></li>
+          <li class="nav-item"><a class="nav-link" data-nav-link="requests.html" href="pages/requests.html">Requests</a></li>
+          <li class="nav-item"><a class="nav-link" data-nav-link="reports.html" href="pages/reports.html">Reports</a></li>
+          <li class="nav-item"><a class="nav-link" data-nav-link="admin.html" href="pages/admin.html">Admin</a></li>
+          <li class="nav-item ms-lg-2"><a class="btn btn-bb-outline btn-sm" href="pages/login.html">Log In</a></li>
+          <li class="nav-item"><a class="btn btn-bb-primary btn-sm" href="pages/register.html">Become a Donor</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+    <!-- Hero -->
+    <section class="hero py-5">
+      <div class="container py-4">
+        <div class="row align-items-center g-5">
+          <div class="col-lg-7">
+            <span class="section-eyebrow">Blood Bank &amp; Donor Management</span>
+            <h1 class="display-5 mt-2 mb-3">Connecting donors, requesters, and blood banks in one place</h1>
+            <p class="lead text-secondary mb-4">
+              LifeDrop helps people find nearby blood donors, lets volunteers register to donate,
+              and gives blood banks a simple dashboard to track inventory and requests.
+              This prototype demonstrates the complete user experience with sample data.
+            </p>
+            <div class="d-flex flex-wrap gap-3">
+              <a href="pages/donors.html" class="btn btn-bb-primary btn-lg px-4"><i class="bi bi-search me-2"></i>Find Blood</a>
+              <a href="pages/register.html" class="btn btn-bb-outline btn-lg px-4"><i class="bi bi-heart me-2"></i>Become a Donor</a>
+            </div>
+          </div>
+          <div class="col-lg-5">
+            <div class="bb-card p-4">
+              <h2 class="h6 text-uppercase text-secondary mb-3">Blood group availability <span class="badge text-bg-light border ms-1">Sample data</span></h2>
+              <div class="row row-cols-2 row-cols-sm-4 g-2" id="heroBloodGroups"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Stats -->
+    <section class="py-5">
+      <div class="container">
+        <div class="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-2">
+          <h2 class="h4 mb-0">System at a glance</h2>
+          <span class="badge text-bg-light border">Demonstration figures, not real-world data</span>
+        </div>
+        <div class="row g-4" id="statCards"></div>
+      </div>
+    </section>
+
+    <!-- How it works -->
+    <section class="py-5 bg-white border-top border-bottom">
+      <div class="container">
+        <h2 class="h4 mb-4">How LifeDrop works</h2>
+        <div class="row g-4">
+          <div class="col-md-4">
+            <div class="bb-card p-4 h-100">
+              <div class="brand-mark mb-3"><i class="bi bi-person-plus"></i></div>
+              <h3 class="h6">1. Register as a donor</h3>
+              <p class="text-secondary small mb-0">Create a donor profile with your blood group and city so people searching for blood can find you.</p>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="bb-card p-4 h-100">
+              <div class="brand-mark mb-3"><i class="bi bi-search-heart"></i></div>
+              <h3 class="h6">2. Search or request blood</h3>
+              <p class="text-secondary small mb-0">Browse the donor directory or submit a blood request with urgency and location details.</p>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="bb-card p-4 h-100">
+              <div class="brand-mark mb-3"><i class="bi bi-clipboard2-pulse"></i></div>
+              <h3 class="h6">3. Blood banks coordinate</h3>
+              <p class="text-secondary small mb-0">Administrators track inventory, review requests, and monitor supply from a single dashboard.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Donor CTA -->
+    <section class="py-5">
+      <div class="container">
+        <div class="bb-card p-5 text-center" style="background: linear-gradient(135deg, var(--bb-red-light), #fff);">
+          <h2 class="h3 mb-2">One donation can save up to three lives</h2>
+          <p class="text-secondary mb-4">Join the LifeDrop donor directory in a few minutes. No commitment required beyond registering your interest.</p>
+          <a href="pages/register.html" class="btn btn-bb-primary btn-lg px-4"><i class="bi bi-heart-fill me-2"></i>Register as a Donor</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer-bb py-5 no-print">
+    <div class="container">
+      <div class="row g-4">
+        <div class="col-md-4">
+          <div class="d-flex align-items-center gap-2 fw-bold h5 text-white mb-2">
+            <span class="brand-mark"><i class="bi bi-droplet-fill"></i></span>
+            LifeDrop
+          </div>
+          <p class="small mb-0">A college mini-project demonstration of a blood bank and donor management system. Not affiliated with any real blood bank.</p>
+        </div>
+        <div class="col-md-4">
+          <h3 class="h6 text-white">Navigate</h3>
+          <ul class="list-unstyled small">
+            <li><a href="index.html">Home</a></li>
+            <li><a href="pages/donors.html">Find Donors</a></li>
+            <li><a href="pages/inventory.html">Inventory</a></li>
+            <li><a href="pages/requests.html">Blood Requests</a></li>
+            <li><a href="pages/reports.html">Reports</a></li>
+          </ul>
+        </div>
+        <div class="col-md-4">
+          <h3 class="h6 text-white">Project info</h3>
+          <ul class="list-unstyled small">
+            <li><a href="pages/admin.html">Admin Dashboard</a></li>
+            <li><a href="pages/login.html">Log In</a></li>
+            <li><a href="pages/register.html">Register</a></li>
+            <li><a href="README.md">Project README</a></li>
+          </ul>
+        </div>
+      </div>
+      <hr class="border-secondary my-4">
+      <p class="small mb-0">&copy; 2026 LifeDrop Blood Bank &amp; Donor Management System &mdash; Mini Project, Step 1 (Frontend Prototype).</p>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="assets/js/mock-data.js"></script>
+  <script src="assets/js/main.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const heroContainer = document.getElementById("heroBloodGroups");
+      if (heroContainer) {
+        heroContainer.innerHTML = MOCK_INVENTORY.map((item) => `
+          <div class="col">
+            <div class="bg-chip">
+              <span class="bg-symbol">${item.bloodGroup}</span>
+              <span class="bg-count">${item.units} units</span>
+            </div>
+          </div>
+        `).join("");
+      }
+
+      const statCards = document.getElementById("statCards");
+      if (statCards) {
+        const stats = [
+          { label: "Registered donors", value: MOCK_STATS.registeredDonors.toLocaleString(), icon: "bi-people-fill" },
+          { label: "Available blood units", value: MOCK_STATS.availableUnits.toLocaleString(), icon: "bi-droplet-half" },
+          { label: "Active blood requests", value: MOCK_STATS.activeRequests.toLocaleString(), icon: "bi-clipboard2-pulse" },
+          { label: "Partner blood banks", value: MOCK_STATS.partnerBanks.toLocaleString(), icon: "bi-hospital" },
+        ];
+        statCards.innerHTML = stats.map((s) => `
+          <div class="col-6 col-lg-3">
+            <div class="bb-card stat-card p-4 h-100">
+              <i class="bi ${s.icon} text-danger fs-4 mb-2 d-block"></i>
+              <div class="stat-value">${s.value}</div>
+              <div class="stat-label">${s.label}</div>
+            </div>
+          </div>
+        `).join("");
+      }
+    });
+  </script>
+</body>
+</html>

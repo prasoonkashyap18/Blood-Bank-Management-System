@@ -1,0 +1,30 @@
+# Python (future Flask backend)
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+.venv/
+*.egg-info/
+
+# Environment / secrets
+.env
+.env.local
+*.key
+
+# Databases (future SQLite)
+*.db
+*.sqlite3
+instance/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+
+# Node (not used yet, reserved for future tooling)
+node_modules/
