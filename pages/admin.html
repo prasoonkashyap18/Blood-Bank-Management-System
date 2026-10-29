@@ -12,7 +12,7 @@
 
   <div class="demo-banner no-print">
     <i class="bi bi-shield-exclamation"></i>
-    Access to this page now requires a real administrator login (Step 2). Its content below is still fictional sample data — editing donors, inventory, and requests is not implemented yet.
+    This dashboard shows real database-backed figures (Step 4): donors, inventory, and blood requests. Manage requests on the <a href="requests.html">Requests</a> page and inventory batches on the <a href="inventory.html">Inventory</a> page.
   </div>
 
   <nav class="navbar navbar-expand-lg navbar-bb sticky-top no-print">
@@ -44,8 +44,8 @@
         <!-- Sidebar -->
         <div class="col-lg-2">
           <div class="bb-sidebar rounded p-3">
-            <span class="badge text-bg-danger-subtle text-danger-emphasis border border-danger-subtle mb-3 d-inline-flex align-items-center gap-1">
-              <i class="bi bi-cone-striped"></i> Demo Mode
+            <span class="badge text-bg-success-subtle text-success-emphasis border border-success-subtle mb-3 d-inline-flex align-items-center gap-1">
+              <i class="bi bi-database-check"></i> Live Data
             </span>
             <nav class="nav flex-column gap-1">
               <a class="nav-link active" href="#overview" data-bs-toggle="pill"><i class="bi bi-grid me-2"></i>Overview</a>
@@ -62,7 +62,7 @@
           <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
             <div>
               <h1 class="h3 mb-1">Administrator dashboard</h1>
-              <p class="text-secondary mb-0">Fictional sample data for demonstration purposes only.</p>
+              <p class="text-secondary mb-0">Live figures from the database. Seed records are fictional demonstration data.</p>
             </div>
             <div class="d-flex gap-2 flex-wrap">
               <a href="donors.html" class="btn btn-bb-outline btn-sm"><i class="bi bi-person-plus me-1"></i>View Donors</a>
@@ -88,6 +88,9 @@
                         </thead>
                         <tbody id="recentRequestsBody"></tbody>
                       </table>
+                    </div>
+                    <div class="empty-state d-none py-3" id="recentRequestsEmpty">
+                      <p class="mb-0 text-secondary small">No requests yet.</p>
                     </div>
                   </div>
                 </div>
@@ -131,7 +134,7 @@
 
   <footer class="footer-bb py-4 no-print mt-5">
     <div class="container text-center small">
-      &copy; 2026 LifeDrop Blood Bank &amp; Donor Management System &mdash; Mini Project, Step 2 (Flask backend &amp; authentication).
+      &copy; 2026 LifeDrop Blood Bank &amp; Donor Management System &mdash; Mini Project, Step 4 (Blood Requests, Dashboard &amp; Reports).
     </div>
   </footer>
 
@@ -139,71 +142,6 @@
   <script src="../assets/js/mock-data.js"></script>
   <script src="../assets/js/main.js"></script>
   <script src="../assets/js/auth.js"></script>
-  <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const pendingCount = MOCK_REQUESTS.filter((r) => r.status === "Pending").length;
-      const fulfilledCount = MOCK_REQUESTS.filter((r) => r.status === "Fulfilled").length;
-
-      document.getElementById("adminStats").innerHTML = [
-        { label: "Total donors", value: MOCK_STATS.registeredDonors.toLocaleString(), icon: "bi-people-fill" },
-        { label: "Units in inventory", value: MOCK_STATS.availableUnits, icon: "bi-droplet-half" },
-        { label: "Pending requests", value: pendingCount, icon: "bi-hourglass-split" },
-        { label: "Fulfilled requests", value: fulfilledCount, icon: "bi-check2-circle" },
-      ].map((s) => `
-        <div class="col-6 col-xl-3">
-          <div class="bb-card stat-card p-4 h-100">
-            <i class="bi ${s.icon} text-danger fs-4 mb-2 d-block"></i>
-            <div class="stat-value">${s.value}</div>
-            <div class="stat-label">${s.label}</div>
-          </div>
-        </div>
-      `).join("");
-
-      document.getElementById("recentRequestsBody").innerHTML = MOCK_REQUESTS.slice(0, 5).map((r) => `
-        <tr>
-          <td class="small text-secondary">${r.id}</td>
-          <td>${escapeHtml(r.requester)}</td>
-          <td>${r.bloodGroup}</td>
-          <td>${badgeHtml(r.status, getStatusVariant(r.status))}</td>
-        </tr>
-      `).join("");
-
-      document.getElementById("allRequestsBody").innerHTML = MOCK_REQUESTS.map((r) => `
-        <tr>
-          <td class="small text-secondary">${r.id}</td>
-          <td>${escapeHtml(r.requester)}</td>
-          <td>${r.bloodGroup}</td>
-          <td>${r.units}</td>
-          <td>${badgeHtml(r.urgency, getUrgencyVariant(r.urgency))}</td>
-          <td>${badgeHtml(r.status, getStatusVariant(r.status))}</td>
-        </tr>
-      `).join("");
-
-      document.getElementById("adminInventoryBody").innerHTML = MOCK_INVENTORY.map((item) => {
-        const stock = getStockStatus(item.units, item.capacity);
-        return `
-          <tr>
-            <td class="fw-medium">${item.bloodGroup}</td>
-            <td>${item.units} units</td>
-            <td>${badgeHtml(stock.label, stock.variant)}</td>
-          </tr>
-        `;
-      }).join("");
-
-      const lowStock = MOCK_INVENTORY.filter((i) => getStockStatus(i.units, i.capacity).label !== "Available");
-      const lowStockEl = document.getElementById("lowStockAlerts");
-      lowStockEl.innerHTML = lowStock.length
-        ? lowStock.map((i) => {
-            const stock = getStockStatus(i.units, i.capacity);
-            return `
-              <div class="d-flex justify-content-between align-items-center border rounded p-2 mb-2">
-                <span><i class="bi bi-exclamation-triangle text-danger me-2"></i>${i.bloodGroup} — ${i.units} units left</span>
-                ${badgeHtml(stock.label, stock.variant)}
-              </div>
-            `;
-          }).join("")
-        : `<p class="text-secondary small mb-0">No low-stock alerts right now.</p>`;
-    });
-  </script>
+  <script src="../assets/js/admin-dashboard.js"></script>
 </body>
 </html>

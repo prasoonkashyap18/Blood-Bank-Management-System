@@ -412,21 +412,288 @@ def get_inventory_summary(
 
 
 # ---------------------------------------------------------------------------
-# Admin summary counts (read-only; used to demonstrate role-based access)
+# Blood requests
 # ---------------------------------------------------------------------------
 
-def get_admin_summary(db: sqlite3.Connection) -> dict:
+class InsufficientStockError(Exception):
+    """Raised when a request can't be approved/fulfilled with current usable stock."""
+
+
+def create_blood_request(
+    db: sqlite3.Connection,
+    *,
+    user_id: int,
+    requester_name: str,
+    requester_contact: str,
+    blood_group: str,
+    quantity_units: int,
+    location: str,
+    urgency: str,
+    notes: str | None = None,
+) -> int:
+    cursor = db.execute(
+        """
+        INSERT INTO blood_requests
+            (user_id, requester_name, requester_contact, blood_group, quantity_units, location, urgency, notes)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            user_id,
+            requester_name.strip(),
+            requester_contact.strip(),
+            blood_group,
+            quantity_units,
+            location.strip(),
+            urgency,
+            (notes or "").strip() or None,
+        ),
+    )
+    db.commit()
+    return cursor.lastrowid
+
+
+def get_request_by_id(db: sqlite3.Connection, request_id: int) -> dict | None:
+    row = db.execute("SELECT * FROM blood_requests WHERE id = ?", (request_id,)).fetchone()
+    return row_to_dict(row)
+
+
+def list_requests(
+    db: sqlite3.Connection,
+    *,
+    user_id: int | None = None,
+    status: str | None = None,
+    blood_group: str | None = None,
+    q: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    limit: int = 20,
+    offset: int = 0,
+) -> tuple[list[dict], int]:
+    """List/search requests. `user_id` set means "only this user's requests"
+    (the owner view); leave it None for the admin, all-requests view."""
+    clauses: list[str] = []
+    params: list[Any] = []
+
+    if user_id is not None:
+        clauses.append("user_id = ?")
+        params.append(user_id)
+    if status:
+        clauses.append("status = ?")
+        params.append(status)
+    if blood_group:
+        clauses.append("blood_group = ?")
+        params.append(blood_group)
+    if q:
+        clauses.append("requester_name LIKE ? ESCAPE '\\'")
+        params.append(f"%{_escape_like(q)}%")
+    if date_from:
+        clauses.append("created_at >= ?")
+        params.append(date_from)
+    if date_to:
+        # created_at is a full ISO timestamp; make an inclusive end-of-day bound.
+        clauses.append("created_at <= ?")
+        params.append(f"{date_to}T23:59:59.999Z")
+
+    where_sql = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+
+    total = db.execute(f"SELECT COUNT(*) AS n FROM blood_requests {where_sql}", params).fetchone()["n"]
+    rows = db.execute(
+        f"SELECT * FROM blood_requests {where_sql} ORDER BY id DESC LIMIT ? OFFSET ?",
+        [*params, limit, offset],
+    ).fetchall()
+
+    return [row_to_dict(row) for row in rows], total
+
+
+def request_view(request: dict) -> dict:
+    return {
+        "id": request["id"],
+        "userId": request["user_id"],
+        "requesterName": request["requester_name"],
+        "requesterContact": request["requester_contact"],
+        "bloodGroup": request["blood_group"],
+        "quantityUnits": request["quantity_units"],
+        "location": request["location"],
+        "urgency": request["urgency"],
+        "status": request["status"],
+        "notes": request["notes"],
+        "rejectionReason": request["rejection_reason"],
+        "decidedBy": request["decided_by"],
+        "fulfilledAt": request["fulfilled_at"],
+        "createdAt": request["created_at"],
+        "updatedAt": request["updated_at"],
+    }
+
+
+def get_usable_stock_for_group(db: sqlite3.Connection, blood_group: str, *, today: date | None = None) -> int:
+    """Sum of quantity across active, unexpired batches for one blood group."""
+    today = (today or date.today()).isoformat()
+    row = db.execute(
+        """
+        SELECT COALESCE(SUM(quantity_units), 0) AS total
+        FROM blood_inventory
+        WHERE blood_group = ? AND status = 'active' AND (expiry_date IS NULL OR expiry_date >= ?)
+        """,
+        (blood_group, today),
+    ).fetchone()
+    return row["total"]
+
+
+def deduct_stock_for_request(
+    db: sqlite3.Connection, blood_group: str, quantity_needed: int, *, today: date | None = None
+) -> None:
+    """Deduct quantity_needed units from active, unexpired batches of blood_group,
+    earliest-expiry-first (so stock closest to expiring is used first).
+
+    Raises InsufficientStockError and changes nothing if usable stock is too
+    low. Does NOT commit: the caller is expected to update the request's
+    status in the same transaction and commit (or roll back) both together.
+    """
+    today_iso = (today or date.today()).isoformat()
+    batches = db.execute(
+        """
+        SELECT * FROM blood_inventory
+        WHERE blood_group = ? AND status = 'active' AND (expiry_date IS NULL OR expiry_date >= ?)
+        ORDER BY (expiry_date IS NULL), expiry_date ASC, id ASC
+        """,
+        (blood_group, today_iso),
+    ).fetchall()
+
+    available = sum(b["quantity_units"] for b in batches)
+    if available < quantity_needed:
+        raise InsufficientStockError(
+            f"Only {available} usable unit(s) of {blood_group} available; {quantity_needed} requested."
+        )
+
+    remaining = quantity_needed
+    for batch in batches:
+        if remaining <= 0:
+            break
+        take = min(batch["quantity_units"], remaining)
+        if take <= 0:
+            continue
+        new_quantity = batch["quantity_units"] - take
+        assert new_quantity >= 0  # guaranteed by take = min(...), kept as a defensive check
+        db.execute(
+            "UPDATE blood_inventory SET quantity_units = ?, updated_at = STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?",
+            (new_quantity, batch["id"]),
+        )
+        remaining -= take
+
+
+def set_request_status(
+    db: sqlite3.Connection,
+    request_id: int,
+    *,
+    status: str,
+    decided_by: int,
+    rejection_reason: str | None = None,
+    mark_fulfilled: bool = False,
+    commit: bool = True,
+) -> None:
+    """Update a request's status. Does not commit when commit=False, so a
+    caller performing a stock deduction in the same transaction can commit
+    (or roll back) both changes together."""
+    fulfilled_at_sql = ", fulfilled_at = STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now')" if mark_fulfilled else ""
+    db.execute(
+        f"""
+        UPDATE blood_requests
+        SET status = ?, decided_by = ?, rejection_reason = ?,
+            updated_at = STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now'){fulfilled_at_sql}
+        WHERE id = ?
+        """,
+        (status, decided_by, rejection_reason, request_id),
+    )
+    if commit:
+        db.commit()
+
+
+def get_requests_status_breakdown(db: sqlite3.Connection, *, date_from: str | None = None, date_to: str | None = None) -> dict:
+    clauses: list[str] = []
+    params: list[Any] = []
+    if date_from:
+        clauses.append("created_at >= ?")
+        params.append(date_from)
+    if date_to:
+        clauses.append("created_at <= ?")
+        params.append(f"{date_to}T23:59:59.999Z")
+    where_sql = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+
+    rows = db.execute(
+        f"SELECT status, COUNT(*) AS n, COALESCE(SUM(quantity_units), 0) AS units "
+        f"FROM blood_requests {where_sql} GROUP BY status",
+        params,
+    ).fetchall()
+    by_status = {row["status"]: {"count": row["n"], "units": row["units"]} for row in rows}
+    for status in ("Pending", "Approved", "Fulfilled", "Rejected"):
+        by_status.setdefault(status, {"count": 0, "units": 0})
+    return by_status
+
+
+# ---------------------------------------------------------------------------
+# Donation reports (admin-wide; per-donor history lives in donors.py)
+# ---------------------------------------------------------------------------
+
+def list_donations_report(
+    db: sqlite3.Connection, *, date_from: str | None = None, date_to: str | None = None, limit: int = 500
+) -> list[dict]:
+    clauses: list[str] = []
+    params: list[Any] = []
+    if date_from:
+        clauses.append("d.donation_date >= ?")
+        params.append(date_from)
+    if date_to:
+        clauses.append("d.donation_date <= ?")
+        params.append(date_to)
+    where_sql = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+
+    rows = db.execute(
+        f"""
+        SELECT d.id, d.donor_id, dn.full_name AS donor_name, dn.blood_group,
+               d.donation_date, d.quantity_units, d.created_at
+        FROM donations d
+        JOIN donors dn ON dn.id = d.donor_id
+        {where_sql}
+        ORDER BY d.donation_date DESC, d.id DESC
+        LIMIT ?
+        """,
+        [*params, limit],
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
+# ---------------------------------------------------------------------------
+# Admin summary counts (read-only; drives the admin dashboard)
+# ---------------------------------------------------------------------------
+
+def get_admin_summary(
+    db: sqlite3.Connection, *, low_stock_threshold: int, near_expiry_days: int, recent_limit: int = 5
+) -> dict:
     def count(table: str) -> int:
         return db.execute(f"SELECT COUNT(*) AS n FROM {table}").fetchone()["n"]
 
-    pending_requests = db.execute(
-        "SELECT COUNT(*) AS n FROM blood_requests WHERE status = 'Pending'"
-    ).fetchone()["n"]
+    status_breakdown = get_requests_status_breakdown(db)
+    inventory_summary = get_inventory_summary(
+        db, low_stock_threshold=low_stock_threshold, near_expiry_days=near_expiry_days
+    )
+
+    recent_rows = db.execute(
+        "SELECT * FROM blood_requests ORDER BY id DESC LIMIT ?", (recent_limit,)
+    ).fetchall()
 
     return {
         "totalUsers": count("users"),
         "totalDonors": count("donors"),
         "totalInventoryBatches": count("blood_inventory"),
         "totalRequests": count("blood_requests"),
-        "pendingRequests": pending_requests,
+        "pendingRequests": status_breakdown["Pending"]["count"],
+        "approvedRequests": status_breakdown["Approved"]["count"],
+        "fulfilledRequests": status_breakdown["Fulfilled"]["count"],
+        "rejectedRequests": status_breakdown["Rejected"]["count"],
+        "availableUnits": inventory_summary["totals"]["usableUnits"],
+        "bloodGroupStock": inventory_summary["groups"],
+        "lowStockGroups": inventory_summary["lowStockGroups"],
+        "outOfStockGroups": inventory_summary["outOfStockGroups"],
+        "nearExpiryUnits": inventory_summary["totals"]["nearExpiryUnits"],
+        "recentRequests": [request_view(row_to_dict(row)) for row in recent_rows],
     }

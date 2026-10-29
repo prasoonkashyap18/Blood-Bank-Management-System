@@ -14,22 +14,17 @@ Finding a compatible blood donor quickly, and giving blood banks a clear view of
 - Provide simple reports summarizing donations, inventory, and requests.
 - Build the system incrementally: a working frontend first, then a real backend, database, and authentication.
 
-## Current Implementation Status: Step 3 — Donor Management & Blood Inventory
+## Current Implementation Status: Step 4 — Blood Requests, Admin Dashboard & Reports
 
-Step 1 delivered a frontend prototype with fictional, client-side-only data. Step 2 added a real Flask backend, SQLite database, and authentication. **Step 3 replaces the donor directory and blood inventory mock data with real, database-backed functionality**: searchable/filterable donor records, donor self-service profile updates, donation-history viewing, batch-level inventory tracking, and low-stock/expiry alerts — all enforced server-side.
+Step 1 delivered a frontend prototype with fictional, client-side-only data. Step 2 added a real Flask backend, SQLite database, and authentication. Step 3 made the donor directory and blood inventory real and database-backed. **Step 4 completes the loop: real blood-request submission and admin processing wired to inventory stock deduction, a real admin dashboard, and real reports with CSV export.**
 
-What's real now (in addition to everything from Step 2):
-- The donor directory (`pages/donors.html`) searches and filters real `donors` rows from SQLite — by name, blood group, city, and status — with pagination and a detail view.
-- A donor's own account can complete/update their profile; only an administrator can change a donor's `status`. Both are enforced server-side, independent of what the UI shows.
-- Donation history (`GET /api/donors/<id>/donations`) comes from the real `donations` table and is visible only to that donor's own account or an administrator.
-- The inventory page (`pages/inventory.html`) shows real, batch-aggregated stock per blood group — usable vs. total-recorded vs. expired vs. near-expiry — calculated server-side, plus low-stock and expiry alerts.
-- Administrators get an in-page panel on the inventory page to add new stock batches and archive existing ones (no destructive deletes), restricted by `@admin_required` on every endpoint.
-- The homepage's blood-group chips and "registered donors"/"available units" stats now read live totals from the same APIs.
+What's real now (in addition to everything from Steps 2–3):
+- **Blood requests** (`pages/requests.html`): any logged-in user can submit a request and see their own request history; administrators can search/filter/inspect every request and move it through `Pending → Approved → Fulfilled` or `→ Rejected` (rejection requires a reason). All of this is enforced server-side — a regular user can never view or act on someone else's request, and only an admin can change a status.
+- **Inventory integration:** approving a request checks that enough *usable* (active, unexpired) stock exists; fulfilling one actually deducts it, earliest-expiring batch first, inside a single database transaction with the request's status change — if the deduction fails, nothing is committed, so inventory and the request are left exactly as they were. A second "fulfill" click on an already-fulfilled request is rejected by the status-transition check before it can touch inventory again, so stock is never double-deducted; stock quantities are clamped so they can never go negative.
+- **Admin dashboard** (`pages/admin.html`): every statistic — total donors, available units, pending/approved/fulfilled requests, per-blood-group stock, recent requests, low-stock/expiry alerts — now comes from `GET /api/admin/summary`, computed from the database on every request.
+- **Reports** (`pages/reports.html`, admin-only): inventory summary, a request-status breakdown with a selectable date range, and a donation summary, all from real data, plus one-click CSV export for the requests and donations reports (generated on the backend from the same authorized, filtered queries — never a plain list of raw database rows, and donor contact details are never included in a donation export).
 
-What's still fictional / not yet wired up (Step 4 scope):
-- Blood request submission, approval, rejection, and fulfilment (`pages/requests.html`) still use Step 1's mock data; no stock is deducted for requests.
-- The admin dashboard's (`pages/admin.html`) own widgets still show Step 1 mock data; a read-only `GET /api/admin/summary` endpoint exists and is tested, but the dashboard UI isn't wired to it yet.
-- Reports (`pages/reports.html`) are still static mock data.
+Nothing from Steps 1–3 was rewritten to build this — the existing auth/session/CSRF/role-based-authorization system, SQLite setup, and donor/inventory endpoints are reused as-is.
 
 ## Architecture
 
@@ -39,11 +34,13 @@ Browser (Step 1 HTML/CSS/JS, served by Flask)
         ▼
 Flask app (backend/app.py)
   ├─ backend/auth.py       — /api/auth/* : register, login, logout, me, CSRF token
-  ├─ backend/admin.py      — /api/admin/* : admin-only endpoints (role enforced server-side)
+  ├─ backend/admin.py      — /api/admin/* : admin dashboard summary (role enforced server-side)
   ├─ backend/donors.py     — /api/donors/* : directory, profile, donation history
   ├─ backend/inventory.py  — /api/inventory/* : public summary + admin batch management
+  ├─ backend/requests.py   — /api/requests/* : submission, viewing, admin status transitions
+  ├─ backend/reports.py    — /api/reports/* : admin-only summaries + CSV export
   ├─ backend/models.py     — parameterized SQL data access (no ORM)
-  ├─ backend/validators.py — shared validation constants (blood groups, email/phone patterns, statuses)
+  ├─ backend/validators.py — shared validation constants (blood groups, statuses, transitions, ...)
   └─ backend/database.py   — SQLite connection + schema + additive migrations (instance/bloodbank.db)
 ```
 
@@ -77,18 +74,21 @@ Blood Bank Management System/
 │   ├── register.html           # Donor registration form, connected to the backend
 │   ├── donors.html             # Searchable donor directory — real SQLite data (Step 3)
 │   ├── inventory.html          # Blood inventory overview + admin batch panel — real data (Step 3)
-│   ├── requests.html           # Submit / view blood requests (still mock data — Step 4)
-│   ├── admin.html               # Administrator dashboard (requires real admin login; widgets still mock data)
-│   └── reports.html            # Summary reports (print-friendly, still mock data — Step 4)
+│   ├── requests.html           # Submit/view requests + admin processing — real data (Step 4)
+│   ├── admin.html               # Administrator dashboard — real data (Step 4)
+│   └── reports.html            # Reports + CSV export, admin-only — real data (Step 4)
 ├── assets/
 │   ├── css/
 │   │   └── style.css           # Shared custom styles
 │   ├── js/
 │   │   ├── main.js             # Shared interactive behaviour (nav, validation, password toggles)
-│   │   ├── mock-data.js        # Fictional demo data still used by requests.html/reports.html
+│   │   ├── mock-data.js        # Fictional demo data (blood-group list reused for filter dropdowns only)
 │   │   ├── auth.js             # Talks to the backend: session-aware nav, login/register forms
-│   │   ├── donors.js           # NEW — donor directory search/filter/pagination + detail modal
-│   │   └── inventory.js        # NEW — inventory summary/alerts + admin batch management panel
+│   │   ├── donors.js           # Donor directory search/filter/pagination + detail modal
+│   │   ├── inventory.js        # Inventory summary/alerts + admin batch management panel
+│   │   ├── requests.js         # NEW — request submission, "my requests", admin processing panel
+│   │   ├── admin-dashboard.js  # NEW — real admin dashboard statistics
+│   │   └── reports.js          # NEW — reports (date range, CSV export)
 │   └── images/
 │
 ├── backend/                   # Flask application
@@ -96,11 +96,13 @@ Blood Bank Management System/
 │   ├── config.py                 # Config / TestConfig, loaded from environment variables
 │   ├── database.py               # SQLite connection, schema, and additive migrations
 │   ├── models.py                  # Parameterized SQL data-access functions
-│   ├── validators.py              # NEW — shared validation constants (blood groups, email/phone, statuses)
+│   ├── validators.py              # Shared validation constants (blood groups, statuses, transitions, ...)
 │   ├── auth.py                    # /api/auth/* routes + login_required / admin_required decorators
-│   ├── admin.py                   # /api/admin/* routes (admin-only)
-│   ├── donors.py                  # NEW — /api/donors/* routes
-│   └── inventory.py               # NEW — /api/inventory/* routes
+│   ├── admin.py                   # /api/admin/* routes (admin dashboard summary)
+│   ├── donors.py                  # /api/donors/* routes
+│   ├── inventory.py               # /api/inventory/* routes
+│   ├── requests.py                # NEW — /api/requests/* routes
+│   └── reports.py                 # NEW — /api/reports/* routes (JSON + CSV export)
 │
 ├── database/                  # One-off scripts, not imported by the app at request time
 │   ├── init_db.py               # Creates the database/tables if missing + runs migrations (idempotent)
@@ -111,8 +113,11 @@ Blood Bank Management System/
 │   ├── conftest.py               # Shared fixtures: app/client/admin_client/registered_user/...
 │   ├── test_auth.py
 │   ├── test_database.py
-│   ├── test_donors.py            # NEW
-│   └── test_inventory.py         # NEW
+│   ├── test_donors.py
+│   ├── test_inventory.py
+│   ├── test_requests.py          # NEW
+│   ├── test_admin_dashboard.py   # NEW
+│   └── test_reports.py           # NEW
 │
 ├── instance/                   # Gitignored — bloodbank.db + session files live here
 ├── .venv/                      # Gitignored — Python virtual environment
@@ -164,7 +169,7 @@ Then edit `.env` and set:
 python database/init_db.py
 ```
 
-This creates `instance/bloodbank.db` and all tables if they don't exist yet. If you have a database from an earlier step, this also safely **migrates** it in place — it adds the columns Step 3 introduced (`donors.email`, `donors.updated_at`, `blood_inventory.status`, `blood_inventory.notes`) with `ALTER TABLE ... ADD COLUMN`, and only for columns that are actually missing. It never drops a table, never deletes a row, and is safe to run every time the app starts (`backend/app.py` also calls it automatically on `create_app()`).
+This creates `instance/bloodbank.db` and all tables if they don't exist yet. If you have a database from an earlier step, this also safely **migrates** it in place — it adds the columns Step 3 (`donors.email`, `donors.updated_at`, `blood_inventory.status`, `blood_inventory.notes`) and Step 4 (`blood_requests.rejection_reason`, `blood_requests.decided_by`, `blood_requests.fulfilled_at`) introduced, with `ALTER TABLE ... ADD COLUMN`, and only for columns that are actually missing. It never drops a table, never deletes a row, and is safe to run every time the app starts (`backend/app.py` also calls it automatically on `create_app()`).
 
 ### 6. Load demonstration data (optional but recommended)
 
@@ -207,7 +212,7 @@ All endpoints return JSON. State-changing requests (`POST`/`PATCH`) require the 
 | `POST /api/auth/login` | Verify credentials, start a server-side session | No |
 | `POST /api/auth/logout` | End the current session | Yes |
 | `GET /api/auth/me` | Return the current user's id, name, email, role | Yes |
-| `GET /api/admin/summary` | Example admin-only endpoint (read-only counts) | Yes, role `admin` |
+| `GET /api/admin/summary` | Full admin dashboard summary (Step 4): donor/inventory/request counts, per-blood-group stock, recent requests, low-stock/expiry alerts | Yes, role `admin` |
 
 **Roles:** `user` (default for every public registration) and `admin` (provisioned only via `database/create_admin.py`, never self-assignable through the API — the register endpoint ignores any `role` field a client sends).
 
@@ -235,16 +240,38 @@ Anonymous and other users only ever see `id`, `fullName`, `bloodGroup`, `city`, 
 
 The public summary is read-only and aggregate-only (no batch-level detail); creating, editing, listing, and archiving batches all require an authenticated administrator, enforced by `@admin_required` on the server.
 
+### Blood requests (Step 4)
+
+| Method & Path | Purpose | Auth required |
+|---|---|---|
+| `POST /api/requests` | Submit a blood request (always starts `Pending`) | Yes |
+| `GET /api/requests` | List requests (`status`, `bloodGroup`, `dateFrom`, `dateTo`, `limit`, `offset`; admins can also pass `q`) | Yes (a regular user only ever sees their own, regardless of filters) |
+| `GET /api/requests/<id>` | One request's details | Yes, owner or admin |
+| `PATCH /api/requests/<id>` | Change status: `Approved`, `Rejected` (`rejectionReason` required), or `Fulfilled` | Yes, role `admin` |
+
+Valid status transitions are `Pending → Approved/Rejected` and `Approved → Fulfilled/Rejected`; `Fulfilled` and `Rejected` are terminal. Approving checks that enough usable stock exists (without deducting it yet); fulfilling deducts it for real, earliest-expiring batch first, in the same database transaction as the status change — see **Blood Requests & Inventory Integration** below.
+
+### Reports (Step 4, all admin-only)
+
+| Method & Path | Purpose |
+|---|---|
+| `GET /api/reports/requests` | Status breakdown + filtered request list (`status`, `bloodGroup`, `dateFrom`, `dateTo`) |
+| `GET /api/reports/requests/export` | Same, as a downloadable CSV |
+| `GET /api/reports/donations` | Donation totals + list (`dateFrom`, `dateTo`) |
+| `GET /api/reports/donations/export` | Same, as a downloadable CSV (donor name + blood group only — never phone/email) |
+
+The inventory summary shown on the reports page reuses the existing public `GET /api/inventory/summary` rather than duplicating it.
+
 ## Database Schema
 
-SQLite, foreign keys enforced (`PRAGMA foreign_keys = ON` on every connection). Timestamps are ISO-8601 UTC strings (e.g. `2026-10-29T12:34:56.789Z`); plain dates (`last_donation_date`, `collected_date`, `expiry_date`, `donation_date`) are ISO-8601 dates (`2026-10-29`). Full definitions are in `backend/database.py`. Columns marked **Step 3** were added by an additive migration (see below) and did not exist in the Step 2 schema.
+SQLite, foreign keys enforced (`PRAGMA foreign_keys = ON` on every connection). Timestamps are ISO-8601 UTC strings (e.g. `2026-10-29T12:34:56.789Z`); plain dates (`last_donation_date`, `collected_date`, `expiry_date`, `donation_date`) are ISO-8601 dates (`2026-10-29`). Full definitions are in `backend/database.py`. Columns marked **Step 3**/**Step 4** were added by an additive migration (see below) and did not exist in the original Step 2 schema.
 
 | Table | Purpose | Key relationships |
 |---|---|---|
 | `users` | Login accounts: name, normalized email (unique), password hash, role, status | — |
 | `donors` | Donor profiles: blood group, contact, city, status, **email** *(Step 3)*, **updated_at** *(Step 3)* | `user_id` → `users.id` (nullable — a donor need not have a login account) |
 | `blood_inventory` | Stock **batches** per blood group, with quantity, collection/expiry dates, **status** *(Step 3: `active`/`archived`)*, **notes** *(Step 3)* | — |
-| `blood_requests` | Requests for blood: group, quantity, urgency, status | `user_id` → `users.id` (nullable) |
+| `blood_requests` | Requests for blood: group, quantity, urgency, status, **rejection_reason** *(Step 4)*, **decided_by** *(Step 4)*, **fulfilled_at** *(Step 4)* | `user_id` → `users.id` (nullable), `decided_by` → `users.id` (the admin who last changed status) |
 | `donations` | Individual donation records | `donor_id` → `donors.id` (`ON DELETE CASCADE`) |
 
 `blood_inventory` was already batch-structured in Step 2 (one row = one batch, with its own `collected_date`/`expiry_date`), so Step 3 reused that structure rather than introducing a parallel schema — it only added `status` (so a batch can be archived instead of deleted) and `notes` (so an administrative correction can record a reason).
@@ -268,7 +295,18 @@ SQLite, foreign keys enforced (`PRAGMA foreign_keys = ON` on every connection). 
 - **Alerts:** a blood group is `lowStock` when `0 < usableUnits < INVENTORY_LOW_STOCK_THRESHOLD` (default **10** units) and `outOfStock` when `usableUnits == 0`. A batch is `near_expiry` when its `expiry_date` is today or later but within `INVENTORY_NEAR_EXPIRY_DAYS` (default **7** days); both are configurable via `.env`. All of this is computed server-side in `backend/models.get_inventory_summary()` and covered by tests — the frontend only displays the numbers it's given.
 - **Admin batch management:** the inventory page shows an admin-only panel (visible only when `GET /api/auth/me` reports role `admin`) to add a batch or archive one. Archiving sets `status = 'archived'` — batches are never deleted, so history and foreign-key integrity (e.g. `donations`) are preserved.
 - **Unit of measure:** "units", matching the unit Step 1/2 already used — not switched to millilitres, since the project already had a working convention.
-- **Out of scope here:** deducting stock for a fulfilled blood request, and any request-approval workflow — both belong to Step 4.
+- **Request-driven deduction:** Step 3 only let an admin add/correct/archive batches directly. Step 4 (below) adds the other way stock changes: automatically, when a blood request is fulfilled.
+
+## Blood Requests & Inventory Integration (Step 4)
+
+- **Submission:** any authenticated user can submit a request (blood group, quantity 1–20, location, urgency, requester name/contact, optional notes); it always starts `Pending` with a unique id and creation timestamp.
+- **Visibility:** a regular user's `GET /api/requests` and `GET /api/requests/<id>` only ever return *their own* requests — the `user_id` filter is applied server-side regardless of what query parameters are sent, and requesting another user's request by id returns `403`. Administrators see everything and can search/filter by status, blood group, requester name, and date range.
+- **Status transitions:** `Pending → Approved` or `Rejected`; `Approved → Fulfilled` or `Rejected`; `Fulfilled` and `Rejected` are final. Any other transition (e.g. `Pending → Fulfilled` directly, or anything from a terminal state) is rejected with `409`, enforced against `backend/validators.REQUEST_TRANSITIONS` — the single source of truth for what's allowed, checked on the server regardless of what the UI shows as clickable.
+- **Rejecting** requires a non-empty `rejectionReason` (`400` without one), recorded on the request.
+- **Approving** checks that enough *usable* stock exists for the blood group (active batches, not expired) and refuses with `409` if not — this doesn't touch inventory yet, it just stops an admin from approving something unfulfillable.
+- **Fulfilling** is the one step that actually moves stock: `backend/models.deduct_stock_for_request()` draws from active, unexpired batches **earliest-expiry-first**, and `backend/requests.py` wraps that deduction and the request's status update in a single transaction — on any error (including insufficient stock discovered at this point) both are rolled back together, so a failed fulfilment never leaves inventory partially deducted or the request in an inconsistent state. Quantities are always clamped so a batch can never go negative.
+- **No duplicate deduction:** fulfilling is only ever reachable from `Approved`; once a request is `Fulfilled` it's a terminal state, so repeating the action (a double click, a retried request) is rejected by the transition check *before* any inventory code runs — tested explicitly in `tests/test_requests.py::test_repeated_fulfill_action_does_not_double_deduct_stock`.
+- **Not implemented (by design):** medical compatibility/crossmatching — this is an administrative prototype, not a substitute for qualified medical review.
 
 ## Running the Tests
 
@@ -276,7 +314,10 @@ SQLite, foreign keys enforced (`PRAGMA foreign_keys = ON` on every connection). 
 pytest tests/ -v
 ```
 
-Each test gets its own temporary SQLite database and session directory (via pytest's `tmp_path`), so running the suite never touches `instance/bloodbank.db` or your real data. As of this step, **74 tests pass**: the original 24 (registration, login/logout, `/me`, admin authorization, schema, persistence, seed idempotency) plus 27 new donor tests and 23 new inventory tests covering search/filter/pagination, profile-ownership authorization (including "changing the ID in the URL doesn't grant access"), donation-history privacy, batch validation (invalid blood group, non-positive quantities, malformed/inconsistent dates), multi-batch stock aggregation, expired-stock exclusion, low-stock/near-expiry/expired classification, archived-batch exclusion, and admin-only write enforcement.
+Each test gets its own temporary SQLite database and session directory (via pytest's `tmp_path`), so running the suite never touches `instance/bloodbank.db` or your real data. As of this step, **119 tests pass**: the Step 2/3 baseline of 74 (registration, login/logout, `/me`, admin authorization, schema, persistence, donor/inventory search, authorization, and stock-alert logic) plus **45 new Step 4 tests**:
+- `tests/test_requests.py` (28): creation/validation, visibility (own vs. all), status-transition rules, reject-reason requirement, approve-with-insufficient-stock rejection, successful fulfilment with stock deduction, FEFO batch ordering, transactional rollback on failed fulfilment, and no-double-deduction on a repeated fulfill action.
+- `tests/test_admin_dashboard.py` (4): real counts reflecting the database, correct empty state with no data, and figures updating after an inventory change.
+- `tests/test_reports.py` (13): access control, status/blood-group/date-range filtering, invalid/inverted date rejection, and CSV export content and headers (including that a donation export never includes donor contact details).
 
 ## Security Considerations
 
@@ -289,23 +330,25 @@ Each test gets its own temporary SQLite database and session directory (via pyte
 - Error handlers return generic JSON messages and never leak stack traces, file paths, or database details to the client.
 - No permissive CORS is configured — the API is only reachable from the same origin that serves the frontend.
 - `.env`, the SQLite database, and session files are all excluded from Git via `.gitignore`.
-- Donor and inventory authorization is re-checked against the database on every request (ownership for donors, `role == 'admin'` for inventory writes) — a donor ID or role value sent by the client is never trusted on its own.
+- Donor and inventory authorization is re-checked against the database on every request (ownership for donors, `role == 'admin'` for inventory/request/report writes) — a donor ID, request ID, or role value sent by the client is never trusted on its own.
+- Request/inventory status transitions are validated against an explicit allow-list server-side (`backend/validators.REQUEST_TRANSITIONS`), not just hidden in the UI; stock deduction and the status change it belongs to are committed or rolled back together as one transaction.
+- CSV exports are generated on the backend from the same authorized, filtered queries as the JSON report endpoints (never a raw table dump), and the donations export deliberately omits donor phone/email even though the requesting admin could view an individual donor's contact details one at a time elsewhere.
 
 ## Current Limitations
 
-- **Blood requests and reports still show Step 1's fictional mock data** (`pages/requests.html`, `pages/reports.html`) — connecting them to the database, including stock deduction on fulfilment, is Step 4 scope.
-- **The admin dashboard's own widgets** (`pages/admin.html`) still render Step 1 mock data rather than calling `GET /api/admin/summary`, even though that endpoint is real, tested, and admin-protected — wiring the dashboard UI to it is Step 3/4 polish, not done here.
-- **No donation-recording or donor-approval workflow UI** — Step 3 displays existing donation history and lets an admin change donor `status`, but there's no "record a new donation" or bulk-approval screen; that's intentionally left for a later step.
+- **No donation-recording or donor-approval workflow UI** — the app displays existing donation history and lets an admin change donor `status`, but there's no "record a new donation" or bulk-approval screen; intentionally out of scope.
 - **No password-reset flow** ("Forgot password?" remains a disabled link).
 - **No rate limiting** on login/registration/API attempts.
-- **Donor search pagination is offset-based** (simple Previous/Next), not cursor-based — adequate at this prototype's scale.
+- **Donor/request search pagination is offset-based** (simple Previous/Next or a `limit`/`offset` query), not cursor-based — adequate at this prototype's scale.
+- **No real-time updates** — dashboard and report figures are fetched on page load/filter-change, not pushed live as other users act.
+- **Concurrency is not deeply tested** — the fulfilment transaction is correct for this prototype's single-admin, single-request-at-a-time usage pattern (SQLite itself serializes writes), but true concurrent-admin race conditions were not specifically load-tested.
 
 ## Planned Development Stages
 
 - **Step 1 — Frontend & project foundation** *(done)*: complete HTML/CSS/JS prototype with mock data.
 - **Step 2 — Flask backend, database, and authentication** *(done)*: Flask API, SQLite database foundation, and real registration/login/logout/session/role-based access, connected to the existing login and registration pages.
-- **Step 3 — Donor management and inventory** *(this step)*: real, database-backed donor directory/search/profiles/donation history, and batch-tracked inventory with low-stock/expiry alerts and admin batch management.
-- **Step 4 — Blood requests, dashboard, and reports**: implement real request workflows (including stock deduction on fulfilment), a data-driven admin dashboard, and generated reports.
+- **Step 3 — Donor management and inventory** *(done)*: real, database-backed donor directory/search/profiles/donation history, and batch-tracked inventory with low-stock/expiry alerts and admin batch management.
+- **Step 4 — Blood requests, dashboard, and reports** *(this step)*: real request submission/approval/rejection/fulfilment wired to transactional inventory deduction, a fully data-driven admin dashboard, and reports with CSV export.
 - **Step 5 — Testing, portability, and finalization**: testing, cleanup, and verifying the project runs on another machine for demonstration.
 
 ## Cloning the Repository

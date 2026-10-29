@@ -12,7 +12,7 @@
 
   <div class="demo-banner no-print">
     <i class="bi bi-info-circle"></i>
-    Demo Mode — all figures below are fictional sample data for a sample reporting period.
+    These reports are generated from the real database (Step 4) and are only visible to administrators. Seed records are fictional demonstration data.
   </div>
 
   <nav class="navbar navbar-expand-lg navbar-bb sticky-top no-print">
@@ -40,53 +40,79 @@
 
   <main class="py-5">
     <div class="container">
-      <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4 no-print">
-        <div>
-          <span class="section-eyebrow">Reports</span>
-          <h1 class="h3 mt-1 mb-1">Summary reports</h1>
-          <p class="text-secondary mb-0">Sample reporting period: <strong>1 Oct 2026 – 29 Oct 2026</strong></p>
-        </div>
-        <button class="btn btn-bb-outline" onclick="window.print()"><i class="bi bi-printer me-1"></i>Print report</button>
+      <div class="alert alert-warning d-none" id="reportsAccessDenied" role="alert">
+        <i class="bi bi-lock me-1"></i>
+        Reports are only visible to administrators. <a href="login.html">Log in</a> with an admin account to view them.
       </div>
 
-      <div class="d-none d-print-block mb-4">
-        <h1 class="h3">LifeDrop — Summary Report</h1>
-        <p class="text-secondary">Sample reporting period: 1 Oct 2026 – 29 Oct 2026 (fictional demonstration data)</p>
-      </div>
+      <div id="reportsRoot">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4 no-print">
+          <div>
+            <span class="section-eyebrow">Reports</span>
+            <h1 class="h3 mt-1 mb-1">Summary reports</h1>
+            <p class="text-secondary mb-0">Figures below reflect the current database. Set a date range to filter requests/donations.</p>
+          </div>
+          <button class="btn btn-bb-outline" onclick="window.print()"><i class="bi bi-printer me-1"></i>Print report</button>
+        </div>
 
-      <div class="row g-4">
-        <div class="col-lg-4">
-          <div class="bb-card p-4 h-100">
-            <h2 class="h6 mb-3"><i class="bi bi-people me-2 text-danger"></i>Donation summary</h2>
-            <ul class="list-unstyled small mb-0">
-              <li class="d-flex justify-content-between py-1 border-bottom"><span>Total registered donors</span><strong id="repDonors"></strong></li>
-              <li class="d-flex justify-content-between py-1 border-bottom"><span>Active donors (this period)</span><strong>186</strong></li>
-              <li class="d-flex justify-content-between py-1 border-bottom"><span>New registrations</span><strong>34</strong></li>
-              <li class="d-flex justify-content-between py-1"><span>Donation sessions held</span><strong>12</strong></li>
-            </ul>
-          </div>
+        <div class="d-none d-print-block mb-4">
+          <h1 class="h3">LifeDrop — Summary Report</h1>
         </div>
-        <div class="col-lg-4">
-          <div class="bb-card p-4 h-100">
-            <h2 class="h6 mb-3"><i class="bi bi-droplet-half me-2 text-danger"></i>Inventory summary</h2>
-            <ul class="list-unstyled small mb-0" id="repInventoryList"></ul>
-          </div>
-        </div>
-        <div class="col-lg-4">
-          <div class="bb-card p-4 h-100">
-            <h2 class="h6 mb-3"><i class="bi bi-clipboard2-pulse me-2 text-danger"></i>Request summary</h2>
-            <ul class="list-unstyled small mb-0" id="repRequestList"></ul>
-          </div>
-        </div>
-      </div>
 
-      <div class="bb-card p-4 mt-4">
-        <h2 class="h6 mb-3">Blood requests this period</h2>
-        <div class="table-responsive">
-          <table class="table table-bb mb-0">
-            <thead><tr><th>ID</th><th>Requester</th><th>Group</th><th>Units</th><th>Date</th><th>Status</th></tr></thead>
-            <tbody id="repRequestsTable"></tbody>
-          </table>
+        <div class="bb-card p-3 p-md-4 mb-4 no-print">
+          <div class="row g-3 align-items-end">
+            <div class="col-6 col-md-3">
+              <label for="reportDateFrom" class="form-label">From</label>
+              <input type="date" class="form-control" id="reportDateFrom">
+            </div>
+            <div class="col-6 col-md-3">
+              <label for="reportDateTo" class="form-label">To</label>
+              <input type="date" class="form-control" id="reportDateTo">
+            </div>
+            <div class="col-6 col-md-2 d-grid">
+              <button type="button" class="btn btn-bb-outline" id="reportApplyBtn">Apply</button>
+            </div>
+            <div class="col-6 col-md-2 d-grid">
+              <button type="button" class="btn btn-outline-secondary" id="exportRequestsBtn"><i class="bi bi-download me-1"></i>Requests CSV</button>
+            </div>
+            <div class="col-6 col-md-2 d-grid">
+              <button type="button" class="btn btn-outline-secondary" id="exportDonationsBtn"><i class="bi bi-download me-1"></i>Donations CSV</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-4">
+          <div class="col-lg-4">
+            <div class="bb-card p-4 h-100">
+              <h2 class="h6 mb-3"><i class="bi bi-people me-2 text-danger"></i>Donation summary</h2>
+              <ul class="list-unstyled small mb-0">
+                <li class="d-flex justify-content-between py-1 border-bottom"><span>Total registered donors</span><strong id="repDonors"></strong></li>
+              </ul>
+              <ul class="list-unstyled small mb-0" id="repDonations"></ul>
+            </div>
+          </div>
+          <div class="col-lg-4">
+            <div class="bb-card p-4 h-100">
+              <h2 class="h6 mb-3"><i class="bi bi-droplet-half me-2 text-danger"></i>Inventory summary</h2>
+              <ul class="list-unstyled small mb-0" id="repInventoryList"></ul>
+            </div>
+          </div>
+          <div class="col-lg-4">
+            <div class="bb-card p-4 h-100">
+              <h2 class="h6 mb-3"><i class="bi bi-clipboard2-pulse me-2 text-danger"></i>Request summary</h2>
+              <ul class="list-unstyled small mb-0" id="repRequestList"></ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="bb-card p-4 mt-4">
+          <h2 class="h6 mb-3">Blood requests (selected range)</h2>
+          <div class="table-responsive">
+            <table class="table table-bb mb-0">
+              <thead><tr><th>ID</th><th>Requester</th><th>Group</th><th>Units</th><th>Date</th><th>Status</th></tr></thead>
+              <tbody id="repRequestsTable"></tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
@@ -94,7 +120,7 @@
 
   <footer class="footer-bb py-4 no-print mt-5">
     <div class="container text-center small">
-      &copy; 2026 LifeDrop Blood Bank &amp; Donor Management System &mdash; Mini Project, Step 1 (Frontend Prototype).
+      &copy; 2026 LifeDrop Blood Bank &amp; Donor Management System &mdash; Mini Project, Step 4 (Blood Requests, Dashboard &amp; Reports).
     </div>
   </footer>
 
@@ -102,39 +128,6 @@
   <script src="../assets/js/mock-data.js"></script>
   <script src="../assets/js/main.js"></script>
   <script src="../assets/js/auth.js"></script>
-  <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      document.getElementById("repDonors").textContent = MOCK_STATS.registeredDonors.toLocaleString();
-
-      document.getElementById("repInventoryList").innerHTML = MOCK_INVENTORY.map((i) => `
-        <li class="d-flex justify-content-between py-1 border-bottom">
-          <span>${i.bloodGroup}</span><strong>${i.units} units</strong>
-        </li>
-      `).join("");
-
-      const byStatus = ["Pending", "Approved", "Fulfilled", "Rejected"].map((status) => ({
-        status,
-        count: MOCK_REQUESTS.filter((r) => r.status === status).length,
-      }));
-      document.getElementById("repRequestList").innerHTML = byStatus.map((s) => `
-        <li class="d-flex justify-content-between py-1 border-bottom">
-          <span>${s.status}</span><strong>${s.count}</strong>
-        </li>
-      `).join("") + `
-        <li class="d-flex justify-content-between py-1 pt-2"><span>Total requests</span><strong>${MOCK_REQUESTS.length}</strong></li>
-      `;
-
-      document.getElementById("repRequestsTable").innerHTML = MOCK_REQUESTS.map((r) => `
-        <tr>
-          <td class="small text-secondary">${r.id}</td>
-          <td>${escapeHtml(r.requester)}</td>
-          <td>${r.bloodGroup}</td>
-          <td>${r.units}</td>
-          <td class="small text-secondary">${r.date}</td>
-          <td>${badgeHtml(r.status, getStatusVariant(r.status))}</td>
-        </tr>
-      `).join("");
-    });
-  </script>
+  <script src="../assets/js/reports.js"></script>
 </body>
 </html>

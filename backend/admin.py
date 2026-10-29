@@ -1,11 +1,6 @@
-"""Minimal administrator-only endpoints.
+"""Administrator-only endpoints: the real-data admin dashboard summary."""
 
-Step 2 only needs enough here to prove role-based authorization end to end;
-the real admin-dashboard data wiring (editing inventory, approving donors,
-processing requests) belongs to Steps 3 and 4.
-"""
-
-from flask import Blueprint, jsonify
+from flask import Blueprint, current_app, jsonify
 
 from . import models
 from .auth import admin_required
@@ -17,4 +12,9 @@ admin_bp = Blueprint("admin", __name__, url_prefix="/api/admin")
 @admin_bp.get("/summary")
 @admin_required
 def summary():
-    return jsonify(summary=models.get_admin_summary(get_db()))
+    summary_data = models.get_admin_summary(
+        get_db(),
+        low_stock_threshold=current_app.config["INVENTORY_LOW_STOCK_THRESHOLD"],
+        near_expiry_days=current_app.config["INVENTORY_NEAR_EXPIRY_DAYS"],
+    )
+    return jsonify(summary=summary_data)

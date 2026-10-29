@@ -67,11 +67,16 @@ CREATE TABLE IF NOT EXISTS blood_requests (
     urgency             TEXT NOT NULL CHECK (urgency IN ('Critical','High','Medium','Low')),
     status              TEXT NOT NULL DEFAULT 'Pending' CHECK (status IN ('Pending','Approved','Fulfilled','Rejected')),
     notes               TEXT,
+    rejection_reason    TEXT,
+    decided_by          INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    fulfilled_at        TEXT,
     created_at          TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now')),
     updated_at          TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
 CREATE INDEX IF NOT EXISTS idx_requests_status ON blood_requests(status);
 CREATE INDEX IF NOT EXISTS idx_requests_blood_group ON blood_requests(blood_group);
+CREATE INDEX IF NOT EXISTS idx_requests_user_id ON blood_requests(user_id);
+CREATE INDEX IF NOT EXISTS idx_requests_created_at ON blood_requests(created_at);
 
 CREATE TABLE IF NOT EXISTS donations (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -105,6 +110,11 @@ MIGRATIONS = {
     "blood_inventory": [
         "ALTER TABLE blood_inventory ADD COLUMN status TEXT NOT NULL DEFAULT 'active'",
         "ALTER TABLE blood_inventory ADD COLUMN notes TEXT",
+    ],
+    "blood_requests": [
+        "ALTER TABLE blood_requests ADD COLUMN rejection_reason TEXT",
+        "ALTER TABLE blood_requests ADD COLUMN decided_by INTEGER",
+        "ALTER TABLE blood_requests ADD COLUMN fulfilled_at TEXT",
     ],
 }
 
