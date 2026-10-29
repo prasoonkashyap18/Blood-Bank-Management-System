@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
   <link rel="stylesheet" href="../assets/css/style.css">
 </head>
-<body>
+<body data-page="requests" data-pages-prefix="">
 
   <div class="demo-banner no-print">
     <i class="bi bi-info-circle"></i>
@@ -31,8 +31,8 @@
           <li class="nav-item"><a class="nav-link" data-nav-link="inventory.html" href="inventory.html">Inventory</a></li>
           <li class="nav-item"><a class="nav-link" data-nav-link="requests.html" href="requests.html">Requests</a></li>
           <li class="nav-item"><a class="nav-link" data-nav-link="reports.html" href="reports.html">Reports</a></li>
-          <li class="nav-item"><a class="nav-link" data-nav-link="admin.html" href="admin.html">Admin</a></li>
-          <li class="nav-item"><a class="btn btn-bb-primary btn-sm" href="register.html">Become a Donor</a></li>
+          <li class="nav-item d-none" id="adminNavItem"><a class="nav-link" data-nav-link="admin.html" href="admin.html">Admin</a></li>
+          <li class="nav-item d-flex align-items-center gap-2 flex-wrap" id="authNavArea"></li>
         </ul>
       </div>
     </div>
@@ -143,6 +143,7 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="../assets/js/mock-data.js"></script>
   <script src="../assets/js/main.js"></script>
+  <script src="../assets/js/auth.js"></script>
   <script>
     document.addEventListener("DOMContentLoaded", () => {
       const tableBody = document.getElementById("requestsTableBody");

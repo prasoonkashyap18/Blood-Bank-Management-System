@@ -8,11 +8,11 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
   <link rel="stylesheet" href="../assets/css/style.css">
 </head>
-<body>
+<body data-page="admin" data-pages-prefix="">
 
   <div class="demo-banner no-print">
     <i class="bi bi-shield-exclamation"></i>
-    Demo Mode — this dashboard does not enforce real administrator authentication or permissions yet.
+    Access to this page now requires a real administrator login (Step 2). Its content below is still fictional sample data — editing donors, inventory, and requests is not implemented yet.
   </div>
 
   <nav class="navbar navbar-expand-lg navbar-bb sticky-top no-print">
@@ -31,7 +31,8 @@
           <li class="nav-item"><a class="nav-link" data-nav-link="inventory.html" href="inventory.html">Inventory</a></li>
           <li class="nav-item"><a class="nav-link" data-nav-link="requests.html" href="requests.html">Requests</a></li>
           <li class="nav-item"><a class="nav-link" data-nav-link="reports.html" href="reports.html">Reports</a></li>
-          <li class="nav-item"><a class="nav-link active" data-nav-link="admin.html" href="admin.html">Admin</a></li>
+          <li class="nav-item" id="adminNavItem"><a class="nav-link active" data-nav-link="admin.html" href="admin.html">Admin</a></li>
+          <li class="nav-item d-flex align-items-center gap-2 flex-wrap" id="authNavArea"></li>
         </ul>
       </div>
     </div>
@@ -137,6 +138,7 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="../assets/js/mock-data.js"></script>
   <script src="../assets/js/main.js"></script>
+  <script src="../assets/js/auth.js"></script>
   <script>
     document.addEventListener("DOMContentLoaded", () => {
       const pendingCount = MOCK_REQUESTS.filter((r) => r.status === "Pending").length;

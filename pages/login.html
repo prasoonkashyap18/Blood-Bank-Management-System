@@ -8,11 +8,11 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
   <link rel="stylesheet" href="../assets/css/style.css">
 </head>
-<body>
+<body data-page="login" data-pages-prefix="">
 
   <div class="demo-banner no-print">
     <i class="bi bi-info-circle"></i>
-    Demo Mode — this is a frontend prototype only. No real authentication is performed yet.
+    This login connects to the local Flask backend added in Step 2. Register an account first if you don't have one.
   </div>
 
   <nav class="navbar navbar-expand-lg navbar-bb sticky-top no-print">
@@ -31,8 +31,8 @@
           <li class="nav-item"><a class="nav-link" data-nav-link="inventory.html" href="inventory.html">Inventory</a></li>
           <li class="nav-item"><a class="nav-link" data-nav-link="requests.html" href="requests.html">Requests</a></li>
           <li class="nav-item"><a class="nav-link" data-nav-link="reports.html" href="reports.html">Reports</a></li>
-          <li class="nav-item"><a class="nav-link" data-nav-link="admin.html" href="admin.html">Admin</a></li>
-          <li class="nav-item"><a class="btn btn-bb-primary btn-sm" href="register.html">Become a Donor</a></li>
+          <li class="nav-item d-none" id="adminNavItem"><a class="nav-link" data-nav-link="admin.html" href="admin.html">Admin</a></li>
+          <li class="nav-item d-flex align-items-center gap-2 flex-wrap" id="authNavArea"></li>
         </ul>
       </div>
     </div>
@@ -47,12 +47,10 @@
           <p class="text-secondary small mb-0">Log in to manage your donor profile or requests.</p>
         </div>
 
-        <div id="loginSuccess" class="alert alert-success d-none" role="alert">
-          <i class="bi bi-check-circle me-1"></i>
-          Demo login successful. In Step 2, this will connect to a real authentication backend.
-        </div>
+        <div id="loginError" class="alert alert-danger d-none" role="alert"></div>
+        <div id="loginSuccess" class="alert alert-success d-none" role="alert"></div>
 
-        <form novalidate data-validate data-success-target="loginSuccess" id="loginForm">
+        <form novalidate id="loginForm">
           <div class="mb-3">
             <label for="loginEmail" class="form-label">Email address <span class="required-asterisk">*</span></label>
             <input type="email" class="form-control" id="loginEmail" name="email" placeholder="you@example.com" required autocomplete="username">
@@ -90,12 +88,13 @@
 
   <footer class="footer-bb py-4 no-print mt-auto">
     <div class="container text-center small">
-      &copy; 2026 LifeDrop Blood Bank &amp; Donor Management System &mdash; Mini Project, Step 1 (Frontend Prototype).
+      &copy; 2026 LifeDrop Blood Bank &amp; Donor Management System &mdash; Mini Project, Step 2 (Flask backend &amp; authentication).
     </div>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="../assets/js/mock-data.js"></script>
   <script src="../assets/js/main.js"></script>
+  <script src="../assets/js/auth.js"></script>
 </body>
 </html>

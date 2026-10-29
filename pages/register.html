@@ -8,11 +8,11 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
   <link rel="stylesheet" href="../assets/css/style.css">
 </head>
-<body>
+<body data-page="register" data-pages-prefix="">
 
   <div class="demo-banner no-print">
     <i class="bi bi-info-circle"></i>
-    Demo Mode — registrations are validated in the browser only and are not saved anywhere.
+    This form creates a real account in the local SQLite database via the Flask backend added in Step 2.
   </div>
 
   <nav class="navbar navbar-expand-lg navbar-bb sticky-top no-print">
@@ -31,8 +31,8 @@
           <li class="nav-item"><a class="nav-link" data-nav-link="inventory.html" href="inventory.html">Inventory</a></li>
           <li class="nav-item"><a class="nav-link" data-nav-link="requests.html" href="requests.html">Requests</a></li>
           <li class="nav-item"><a class="nav-link" data-nav-link="reports.html" href="reports.html">Reports</a></li>
-          <li class="nav-item"><a class="nav-link" data-nav-link="admin.html" href="admin.html">Admin</a></li>
-          <li class="nav-item"><a class="btn btn-bb-outline btn-sm" href="login.html">Log In</a></li>
+          <li class="nav-item d-none" id="adminNavItem"><a class="nav-link" data-nav-link="admin.html" href="admin.html">Admin</a></li>
+          <li class="nav-item d-flex align-items-center gap-2 flex-wrap" id="authNavArea"></li>
         </ul>
       </div>
     </div>
@@ -47,12 +47,10 @@
           <p class="text-secondary small mb-0">Join the LifeDrop donor directory. Fields marked <span class="required-asterisk">*</span> are required.</p>
         </div>
 
-        <div id="registerSuccess" class="alert alert-success d-none" role="alert">
-          <i class="bi bi-check-circle me-1"></i>
-          Demo registration successful! In this prototype no data is actually stored — a real account will be created once the backend (Step 2) is connected.
-        </div>
+        <div id="registerError" class="alert alert-danger d-none" role="alert"></div>
+        <div id="registerSuccess" class="alert alert-success d-none" role="alert"></div>
 
-        <form novalidate data-validate data-success-target="registerSuccess" data-extra-validator="validateRegisterForm" id="registerForm">
+        <form novalidate id="registerForm">
           <div class="row g-3">
             <div class="col-md-6">
               <label for="fullName" class="form-label">Full name <span class="required-asterisk">*</span></label>
@@ -137,13 +135,14 @@
 
   <footer class="footer-bb py-4 no-print mt-auto">
     <div class="container text-center small">
-      &copy; 2026 LifeDrop Blood Bank &amp; Donor Management System &mdash; Mini Project, Step 1 (Frontend Prototype).
+      &copy; 2026 LifeDrop Blood Bank &amp; Donor Management System &mdash; Mini Project, Step 2 (Flask backend &amp; authentication).
     </div>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="../assets/js/mock-data.js"></script>
   <script src="../assets/js/main.js"></script>
+  <script src="../assets/js/auth.js"></script>
   <script>
     document.addEventListener("DOMContentLoaded", () => {
       const lastDonationInput = document.getElementById("lastDonation");
@@ -151,15 +150,6 @@
         lastDonationInput.max = new Date().toISOString().split("T")[0];
       }
     });
-
-    /** Extra cross-field validation: confirm password must match password. Returns true if valid. */
-    function validateRegisterForm(form) {
-      const password = form.querySelector("#regPassword");
-      const confirm = form.querySelector("#confirmPassword");
-      const matches = password.value === confirm.value && confirm.value.length > 0;
-      confirm.setCustomValidity(matches ? "" : "mismatch");
-      return matches;
-    }
   </script>
 </body>
 </html>

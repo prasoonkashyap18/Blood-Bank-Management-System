@@ -19,6 +19,9 @@ env/
 *.sqlite3
 instance/
 
+# Testing
+.pytest_cache/
+
 # Editor / OS
 .vscode/
 .idea/
